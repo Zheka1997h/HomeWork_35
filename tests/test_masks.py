@@ -17,3 +17,5 @@ def test_get_mask_account():
     # Проверка на некорректный ввод
     with pytest.raises(ValueError):
         get_mask_account("***45")  # Слишком короткий номер
+
+

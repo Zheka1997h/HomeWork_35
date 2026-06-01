@@ -19,3 +19,5 @@ def sort_by_date(transactions: List[Dict], descending: bool = True) -> List[Dict
     :return: Новый список словарей, отсортированный по дате.
     """
     return sorted(transactions, key=lambda x: x['date'], reverse=descending)
+
+

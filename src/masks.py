@@ -27,3 +27,5 @@ def get_mask_account(account_number: str) -> str:
         raise ValueError("Невалидный номер счета")
     mask = f"**{account_number[-4:]}"
     return mask
+
+
