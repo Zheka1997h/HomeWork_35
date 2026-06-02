@@ -16,8 +16,7 @@ def transactions():
         {'id': 1, 'date': '2023-10-01', 'state': 'EXECUTED'},
         {'id': 2, 'date': '2023-09-30', 'state': 'CANCELED'},
         {'id': 3, 'date': '2023-10-02', 'state': 'EXECUTED'},
-        {'id': 4, 'date': '2023-09-29', 'state': 'PENDING'}
-    ]
+        {'id': 4, 'date': '2023-09-29', 'state': 'PENDING'}]
 
 
 @pytest.mark.parametrize("state, expected_ids", [
