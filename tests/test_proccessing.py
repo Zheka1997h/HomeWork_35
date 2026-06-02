@@ -39,7 +39,3 @@ def test_filter_by_state(transactions, state, expected_ids):
 def test_sort_by_date(transactions, descending, expected_order):
     sorted_transactions = sort_by_date(transactions, descending)
     assert [t['id'] for t in sorted_transactions] == expected_order
-
-# Запуск тестов (если этот файл запускается напрямую)
-if __name__ == "__main__":
-    pytest.main()
