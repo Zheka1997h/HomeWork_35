@@ -1,3 +1,5 @@
+
+
 def mask_account_card(card_info):
     # Разделяем строку на части
     parts = card_info.split()
