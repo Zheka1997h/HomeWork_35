@@ -1,5 +1,5 @@
 import pytest
-from typing import List, Dict
+from src.proccessing import List, Dict
 
 # Предполагаем, что функции filter_by_state и sort_by_date уже определены
 
