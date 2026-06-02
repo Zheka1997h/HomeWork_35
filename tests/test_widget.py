@@ -38,7 +38,3 @@ def test_get_date():
     with pytest.raises(ValueError):
         get_date("31/12/2022")
 
-# Запуск тестов (если этот файл запускается напрямую)
-if __name__ == "__main__":
-    pytest.main()
-
