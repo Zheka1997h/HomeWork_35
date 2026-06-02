@@ -1,5 +1,6 @@
 from typing import List, Dict, Optional
 
+
 def filter_by_state(transactions: List[Dict], state: str = 'EXECUTED') -> List[Dict]:
     """
     Фильтрует список словарей по значению ключа 'state'.
@@ -10,6 +11,7 @@ def filter_by_state(transactions: List[Dict], state: str = 'EXECUTED') -> List[D
     """
     return [transaction for transaction in transactions if transaction.get('state') == state]
 
+
 def sort_by_date(transactions: List[Dict], descending: bool = True) -> List[Dict]:
     """
     Сортирует список словарей по дате.
@@ -19,3 +21,4 @@ def sort_by_date(transactions: List[Dict], descending: bool = True) -> List[Dict
     :return: Новый список словарей, отсортированный по дате.
     """
     return sorted(transactions, key=lambda x: x['date'], reverse=descending)
+    
