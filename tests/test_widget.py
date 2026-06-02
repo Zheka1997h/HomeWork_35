@@ -1,40 +1,57 @@
-from src.widget import mask_account_card, get_date
+import pytest
+from src.widget import mask_account_card, get_date  # Замените 'your_module' на имя вашего модуля
 
-import pytest , unittest
+@pytest.fixture
+def valid_card_data():
+    return [
+        ("Visa 1234567812345678", "Visa 1234 56 ** 5678"),
+        ("MasterCard 9876543210123456", "MasterCard 9876 54 ** 3456"),
+        ("Maestro 1234567890123456", "Maestro 1234 56 ** 3456"),
+        ("Счет 123456789012", "Счет **9012")
+    ]
+
+@pytest.fixture
+def invalid_card_data():
+    return [
+        ("InvalidType 12345678"),   # Неподдерживаемый тип карты
+        ("Visa 123"),                 # Слишком короткий номер карты
+        ("MasterCard 123456789012345"), # Неверная длина номера карты
+    ]
+
+@pytest.fixture
+def valid_date_data():
+    return [
+        ("2023-10-15", "15.10.2023"),
+        ("2020-01-01", "01.01.2020"),
+    ]
+
+@pytest.fixture
+def invalid_date_data():
+    return [
+        ("2023/10/15"),  # Неправильный формат даты
+        ("15-10-2023"),  # Неправильный формат даты
+        (12345),          # Не строка
+        ("2023-10-151"), # Неверная длина строки
+    ]
+
+def test_mask_account_card(valid_card_data):
+    for card_info, expected in valid_card_data:
+        assert mask_account_card(card_info) == expected
+
+def test_mask_account_card_invalid(invalid_card_data):
+    for card_info in invalid_card_data:
+        with pytest.raises(ValueError):
+            mask_account_card(card_info)
+
+def test_get_date(valid_date_data):
+    for date_str, expected in valid_date_data:
+        assert get_date(date_str) == expected
+
+def test_get_date_invalid(invalid_date_data):
+    for date_str in invalid_date_data:
+        with pytest.raises(ValueError):
+            get_date(date_str)
 
 
-class TestMaskAccountCard(unittest.TestCase):
 
-    def test_mask_visa(self):
-        self.assertEqual(mask_account_card("Visa 1234567812345678"), "Visa 1234 56 ** 5678")
-
-    def test_mask_mastercard(self):
-        self.assertEqual(mask_account_card("MasterCard 9876543210987654"), "MasterCard 9876 54 ** 7654")
-
-    def test_mask_maestro(self):
-        self.assertEqual(mask_account_card("Maestro 1111222233334444"), "Maestro 1111 22 ** 4444")
-
-    def test_mask_schet(self):
-        self.assertEqual(mask_account_card("Счет 1234567890123456"), "Счет **3456")
-
-    def test_invalid_card_type(self):
-        with self.assertRaises(ValueError):
-            mask_account_card("UnknownType 1234567890123456")
-
-    def test_invalid_card_number_length(self):
-        with self.assertRaises(IndexError):  # Или ValueError, если обработка будет добавлена
-            mask_account_card("")  # Неправильная длина номера карты
-
-    def test_invalid_account_number(self):
-        with self.assertRaises(IndexError):  # Или ValueError, если обработка будет добавлена
-            mask_account_card("")  # Неправильный формат ввода
-
-
-
-def test_get_date():
-    assert get_date("2023-10-01") == "01.10.2023"
-    assert get_date("2022-12-31") == "31.12.2022"
-
-    with pytest.raises(ValueError):
-        get_date("31/12/2022")
 

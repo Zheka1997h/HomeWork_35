@@ -1,24 +1,39 @@
-def mask_account_card(card_info: str) -> str:
+def mask_account_card(card_info):
+    # Разделяем строку на части
     parts = card_info.split()
-    card_type = " ".join(parts[:-1])
-    card_number = parts[-1]
 
-    if card_type.lower() in ["visa", "mastercard", "maestro"]:
-        # Маскировка для карт
-        masked_number = f"{card_number[:4]} {card_number[4:6]} ** {card_number[-4:]}"
-        return f"{card_type} {masked_number}"
-    elif card_type.lower() == "счет":
-        # Маскировка для счета
-        masked_number = f"**{card_number[-4:]}"
-        return f"{card_type} {masked_number}"
-    else:
-        raise ValueError("Неподдерживаемый тип карты или счета")
+    # Проверяем, что у нас есть как минимум два элемента: тип карты и номер
+    if len(parts) < 2:
+        raise ValueError("Input must contain both card type and card number")
 
+    card_type = parts[0]
+    card_number = ''.join(filter(str.isdigit, parts[1]))
+
+    # Проверяем, что тип карты поддерживается
+    if card_type not in ["Visa", "MasterCard", "Maestro", "Счет"]:
+        raise ValueError("Unsupported card type")
+
+    # Проверяем длину номера карты
+    if len(card_number) < 4:
+        raise ValueError("Card number is too short")
+
+    # Маскируем номер карты в зависимости от типа
+    if card_type in ["Visa", "MasterCard", "Maestro"]:
+        if len(card_number) == 16:
+            return f"{card_type} {card_number[:4]} {card_number[4:6]} ** {card_number[-4:]}"
+        else:
+            raise ValueError("Invalid card number length for Visa/MasterCard/Maestro")
+
+    elif card_type == "Счет":
+        # Для счета просто показываем последние 4 цифры
+        return f"{card_type} **{card_number[-4:]}"
+
+    raise ValueError("Invalid card number length")
 
 def get_date(date_str: str) -> str:
     # Проверка на корректность формата даты
     if not isinstance(date_str, str) or len(date_str) != 10:
-        raise ValueError("Дата должна быть строкой длиной 10 символов.")
+        raise ValueError()
     # Парсинг строки в объект datetime
     from datetime import datetime
     date_obj = datetime.fromisoformat(date_str)
