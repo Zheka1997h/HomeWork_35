@@ -30,6 +30,7 @@ def mask_account_card(card_info):
 
     raise ValueError("Invalid card number length")
 
+
 def get_date(date_str: str) -> str:
     # Проверка на корректность формата даты
     if not isinstance(date_str, str) or len(date_str) != 10:

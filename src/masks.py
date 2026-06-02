@@ -1,11 +1,8 @@
-
-
 def get_mask_card_number(card_number: str) -> str:
     """
     Маскирует номер банковской карты.
     Args:
         card_number (str): Номер карты (16 цифр).
-
     Returns
         str: Замаскированный номер в формате XXXX XX** **** XXXX
     """
@@ -27,5 +24,3 @@ def get_mask_account(account_number: str) -> str:
         raise ValueError("Невалидный номер счета")
     mask = f"**{account_number[-4:]}"
     return mask
-
-
