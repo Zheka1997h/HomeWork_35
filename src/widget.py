@@ -1,4 +1,16 @@
-def mask_account_card(card_info):
+def mask_account_card(card_info: str) -> str:
+    """
+    Маскирует номер карты в зависимости от типа карты.
+
+    Args:
+        card_info (str): Строка, содержащая тип карты и номер карты.
+
+    Returns:
+        str: Строка с замаскированным номером карты.
+
+    Raises:
+        ValueError: Если введенные данные неверны, тип карты не поддерживается или номер карты слишком короткий.
+    """
     # Разделяем строку на части
     parts = card_info.split()
 
@@ -21,17 +33,25 @@ def mask_account_card(card_info):
     if card_type in ["Visa", "MasterCard", "Maestro"]:
         if len(card_number) == 16:
             return f"{card_type} {card_number[:4]} {card_number[4:6]} ** {card_number[-4:]}"
-        else:
-            raise ValueError("Invalid card number length for Visa/MasterCard/Maestro")
-
     elif card_type == "Счет":
         # Для счета просто показываем последние 4 цифры
         return f"{card_type} **{card_number[-4:]}"
-
     raise ValueError("Invalid card number length")
 
 
 def get_date(date_str: str) -> str:
+    """
+    Преобразует строку даты в формате ISO в форматированную строку даты.
+
+    Args:
+        date_str (str): Строка даты в формате ISO (ГГГГ-ММ-ДД).
+
+    Returns:
+        str: Строка даты, отформатированная как ДД.ММ.ГГГГ.
+
+    Raises:
+        ValueError: Строка даты, отформатированная как ДД.ММ.ГГГГ.Если введенная строка даты неверна.
+    """
     # Проверка на корректность формата даты
     if not isinstance(date_str, str) or len(date_str) != 10:
         raise ValueError()
