@@ -1,90 +1,143 @@
-from typing import Any, Dict, List
+from typing import Dict, List
 
 import pytest
 
-from src.generators import filter_by_currency, transaction_descriptions, unique_card_number_generator
+from src.generators import card_number_generator, filter_by_currency, transaction_descriptions
+
 
 # Фикстура для транзакций
-
-
 @pytest.fixture
-def transactions() -> List[Dict[str, Any]]:
+def transactions() -> List[Dict]:
     """
-    Создает фикстуру транзакций для тестов.
+    Создает фикстуру списка транзакций.
 
-    :return: Список транзакций.
+    Returns:
+        List[Dict]: Список транзакций со словарями, содержащими информацию о валюте и описании.
     """
     return [
-        {"amount": 100, "currency": "USD", "description": "Покупка"},
-        {"amount": 50, "currency": "EUR", "description": "Оплата"},
-        {"amount": 200, "currency": "USD", "description": "Перевод"},
-        {"amount": 75, "currency": "EUR"},  # Без описания
+        {"operationAmount": {"currency": {"code": "USD"}}},
+        {"operationAmount": {"currency": {"code": "RUB"}}},
+        {"description": "Покупка в магазине"},
+        {},
     ]
 
 
-# Тест для filter_by_currency с обработкой исключений
-
-
-def test_filter_by_currency(transactions: List[Dict[str, Any]]) -> None:
-    """
-    Тестирует функцию filter_by_currency, проверяя, что она правильно фильтрует транзакции по валюте.
-
-    :param transactions: Список транзакций для фильтрации.
-    """
-    try:
-        usd_transactions = list(filter_by_currency(transactions, "USD"))
-        assert len(usd_transactions) == 2
-        assert all(txn["currency"] == "USD" for txn in usd_transactions)
-
-        eur_transactions = list(filter_by_currency(transactions, "EUR"))
-        assert len(eur_transactions) == 2
-        assert all(txn["currency"] == "EUR" for txn in eur_transactions)
-    except Exception as e:
-        raise ValueError(f"Ошибка при фильтрации транзакций: {e}")
-
-
-# Тест для transaction_descriptions с обработкой исключений
-
-
-def test_transaction_descriptions(transactions: List[Dict[str, Any]]) -> None:
-    """
-    Тестирует функцию transaction_descriptions, проверяя, что она возвращает правильные описания транзакций.
-
-    :param transactions: Список транзакций для получения описаний.
-    """
-    try:
-        descriptions = list(transaction_descriptions(transactions))
-        assert len(descriptions) == 4
-        assert descriptions[0] == "Покупка"
-        assert descriptions[1] == "Оплата"
-        assert descriptions[2] == "Перевод"
-        assert descriptions[3] == "Описание ситуации не указано"  # Без описания
-    except Exception as e:
-        raise ValueError(f"Ошибка при получении описаний транзакций: {e}")
-
-
-# Параметризованный тест для unique_card_number_generator с обработкой исключений
-
-
+# Тесты для функции filter_by_currency
 @pytest.mark.parametrize(
-    "count, expected_count",
+    "currency, expected",
     [
-        (5, 5),
-        (10, 10),
-        (15, 15),
+        ("USD", [{"operationAmount": {"currency": {"code": "USD"}}}]),
+        ("RUB", [{"operationAmount": {"currency": {"code": "RUB"}}}]),
+        ("EUR", []),
     ],
 )
-def test_unique_card_number_generator(count: int, expected_count: int, transactions: List[Dict[str, Any]]) -> None:
+def test_filter_by_currency(transactions: List, currency: str, expected: List) -> None:
     """
-    Тестирует функцию unique_card_number_generator, проверяя, что она генерирует указанное количество
-    уникальных номеров карт.
-    :param count: Количество номеров карт для генерации.
-    :param expected_count: Ожидаемое количество уникальных номеров.
-    :param transactions: Список транзакций (не используется в данном тесте, но передается).
+    Тестирует функцию filter_by_currency, чтобы убедиться, что она правильно фильтрует транзакции по валюте.
+
+    Args:
+        transactions (List[Dict]): Список транзакций.
+        currency (str): Код валюты для фильтрации.
+        expected (List[Dict]): Ожидаемый результат фильтрации.
     """
-    try:
-        card_numbers = list(unique_card_number_generator(count))
-        assert len(card_numbers) == expected_count
-        assert len(set(card_numbers)) == expected_count  # Все номера должны быть уникальными
-    except Exception as e:
-        raise ValueError(f"Ошибка при генерации уникальных номеров карт: {e}")
+    result = list(filter_by_currency(transactions, currency))
+    assert result == expected
+
+
+# Тесты для функции transaction_descriptions
+@pytest.mark.parametrize(
+    "expected",
+    [
+        [
+            "Описание ситуации не указано",
+            "Описание ситуации не указано",
+            "Покупка в магазине",
+            "Описание ситуации не указано",
+        ]
+    ],
+)
+def test_transaction_descriptions(transactions: List, expected:List[str]) -> None:
+    """
+    Тестирует функцию transaction_descriptions для правильного извлечения описаний транзакций.
+
+    Args:
+        transactions (List[Dict]): Список транзакций.
+        expected (List[str]): Ожидаемый список описаний транзакций.
+    """
+    result = list(transaction_descriptions(transactions))
+    assert result == expected
+
+
+# Тесты для функции card_number_generator
+@pytest.mark.parametrize("count", [1, 5, 10])
+def test_card_number_generator(count: int) -> None:
+    """
+    Тестирует функцию card_number_generator для генерации указанного количества номеров карт.
+
+    Args:
+        count (int): Количество номеров карт для генерации.
+    """
+    cards = card_number_generator(count)
+    assert len(cards) == count
+    assert all(isinstance(card, str) and len(card) == 19 for card in cards)
+
+    # Проверяем уникальность номеров
+    assert len(set(cards)) == count
+
+
+# Тесты для функции card_number_generator на исключения
+@pytest.mark.parametrize(
+    "count, start, stop, expected_exception",
+    [
+        (-1, 0, 9999999999999999, ValueError),  # отрицательное значение count
+        (1, 10, 5, ValueError),  # stop меньше start
+    ],
+)
+def test_card_number_generator_exceptions(count: int, start: int, stop: int, expected_exception):
+    """
+    Тестирует функцию card_number_generator на генерацию исключений при неверных параметрах.
+
+    Args:
+        count (int): Количество номеров карт для генерации.
+        start (int): Начальный диапазон для генерации номеров.
+        stop (int): Конечный диапазон для генерации номеров.
+        expected_exception (Exception): Ожидаемое исключение.
+    """
+    with pytest.raises(expected_exception):
+        card_number_generator(count, start, stop)
+
+
+# Тесты для функции card_number_generator с полным покрытием
+@pytest.mark.parametrize(
+    "count, start, stop",
+    [
+        (5, 0, 9999999999999999),
+        (5, 1000000000000000, 9999999999999999),
+    ],
+)
+def test_card_number_generator_full_coverage(count: int, start: int, stop: int) -> None:
+    """
+    Тестирует функцию card_number_generator с полным покрытием диапазона номеров.
+
+    Args:
+        count (int): Количество номеров карт для генерации.
+        start (int): Начальный диапазон для генерации номеров.
+        stop (int): Конечный диапазон для генерации номеров.
+    """
+    cards = card_number_generator(count, start, stop)
+    assert len(cards) == count
+    assert all(isinstance(card, str) and len(card) == 19 for card in cards)
+
+    # Проверяем уникальность номеров
+    assert len(set(cards)) == count
+
+    # Проверяем, что номера карт в правильном диапазоне
+    for card in cards:
+        # Удаляем пробелы и преобразуем в число
+        card_number = int(card.replace(" ", ""))
+        assert start <= card_number <= stop
+
+    # Печатаем сгенерированные номера (для проверки)
+    print("Сгенерированные номера карт:")
+    for card in cards:
+        print(card)
