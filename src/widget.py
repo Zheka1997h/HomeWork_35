@@ -19,7 +19,7 @@ def mask_account_card(card_info: str) -> str:
         raise ValueError("Input must contain both card type and card number")
 
     card_type = parts[0]
-    card_number = ''.join(filter(str.isdigit, parts[1]))
+    card_number = "".join(filter(str.isdigit, parts[1]))
 
     # Проверяем, что тип карты поддерживается
     if card_type not in ["Visa", "MasterCard", "Maestro", "Счет"]:
@@ -57,5 +57,6 @@ def get_date(date_str: str) -> str:
         raise ValueError()
     # Парсинг строки в объект datetime
     from datetime import datetime
+
     date_obj = datetime.fromisoformat(date_str)
     return date_obj.strftime("%d.%m.%Y")

@@ -11,7 +11,7 @@ def filter_by_currency(transactions: List[Dict], currency: str) -> Generator:
     :yield: транзакция, если её валюта совпадает с переданной
     """
     for transaction in transactions:
-        if transaction.get('currency') == currency:
+        if transaction.get("currency") == currency:
             yield transaction
 
 
@@ -23,7 +23,7 @@ def transaction_descriptions(transactions: List[Dict]) -> Generator:
     :yield: описание транзакции или сообщение, если описание не указано
     """
     for transaction in transactions:
-        yield transaction.get('description', 'Описание ситуации не указано')
+        yield transaction.get("description", "Описание ситуации не указано")
 
 
 def unique_card_number_generator(count: int) -> Generator:
@@ -39,8 +39,9 @@ def unique_card_number_generator(count: int) -> Generator:
         # Генерируем случайный номер карты
         num = random.randint(0, 9999999999999999)  # 16-значное число
         formatted_number = f"{num:016d}"
-        card_number = (f"{formatted_number[:4]} {formatted_number[4:8]}"
-                       f" {formatted_number[8:12]} {formatted_number[12:]}")
+        card_number = (
+            f"{formatted_number[:4]} {formatted_number[4:8]}" f" {formatted_number[8:12]} {formatted_number[12:]}"
+        )
 
         # Добавляем номер в множество, чтобы избежать дубликатов
         if card_number not in generated_numbers:
@@ -55,13 +56,13 @@ for card_number in unique_card_number_generator(10):
 
 # Пример использования фильтрации транзакций
 transactions = [
-    {'amount': 100, 'currency': 'USD', 'description': 'Покупка'},
-    {'amount': 50, 'currency': 'EUR', 'description': 'Оплата'},
-    {'amount': 200, 'currency': 'USD', 'description': 'Перевод'},
+    {"amount": 100, "currency": "USD", "description": "Покупка"},
+    {"amount": 50, "currency": "EUR", "description": "Оплата"},
+    {"amount": 200, "currency": "USD", "description": "Перевод"},
 ]
 
 print("\nТранзакции в USD:")
-for txn in filter_by_currency(transactions, 'USD'):
+for txn in filter_by_currency(transactions, "USD"):
     print(txn)
 
 # Пример использования генератора описаний транзакций
