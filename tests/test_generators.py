@@ -1,3 +1,4 @@
+from itertools import islice
 from typing import Dict, List
 
 import pytest
@@ -56,7 +57,7 @@ def test_filter_by_currency(transactions: List, currency: str, expected: List) -
         ]
     ],
 )
-def test_transaction_descriptions(transactions: List, expected:List[str]) -> None:
+def test_transaction_descriptions(transactions: List, expected: List[str]) -> None:
     """
     Тестирует функцию transaction_descriptions для правильного извлечения описаний транзакций.
 
@@ -68,76 +69,41 @@ def test_transaction_descriptions(transactions: List, expected:List[str]) -> Non
     assert result == expected
 
 
-# Тесты для функции card_number_generator
-@pytest.mark.parametrize("count", [1, 5, 10])
-def test_card_number_generator(count: int) -> None:
-    """
-    Тестирует функцию card_number_generator для генерации указанного количества номеров карт.
-
-    Args:
-        count (int): Количество номеров карт для генерации.
-    """
-    cards = card_number_generator(count)
-    assert len(cards) == count
-    assert all(isinstance(card, str) and len(card) == 19 for card in cards)
-
-    # Проверяем уникальность номеров
-    assert len(set(cards)) == count
+# Фикстура для установки начального и конечного значений
 
 
-# Тесты для функции card_number_generator на исключения
+@pytest.fixture
+def card_range():
+    start_card = "0000 0000 0000 0001"
+    stop_card = "0000 0000 0000 0010"
+    return start_card, stop_card
+
+
+# Параметризированный тест для проверки генерации номеров карт
+
+
 @pytest.mark.parametrize(
-    "count, start, stop, expected_exception",
+    "start, stop, expected",
     [
-        (-1, 0, 9999999999999999, ValueError),  # отрицательное значение count
-        (1, 10, 5, ValueError),  # stop меньше start
+        (
+            "0000 0000 0000 0001",
+            "0000 0000 0000 0010",
+            [
+                "0000 0000 0000 0001",
+                "0000 0000 0000 0002",
+                "0000 0000 0000 0003",
+                "0000 0000 0000 0004",
+                "0000 0000 0000 0005",
+                "0000 0000 0000 0006",
+                "0000 0000 0000 0007",
+                "0000 0000 0000 0008",
+                "0000 0000 0000 0009",
+            ],
+        )
     ],
 )
-def test_card_number_generator_exceptions(count: int, start: int, stop: int, expected_exception):
-    """
-    Тестирует функцию card_number_generator на генерацию исключений при неверных параметрах.
-
-    Args:
-        count (int): Количество номеров карт для генерации.
-        start (int): Начальный диапазон для генерации номеров.
-        stop (int): Конечный диапазон для генерации номеров.
-        expected_exception (Exception): Ожидаемое исключение.
-    """
-    with pytest.raises(expected_exception):
-        card_number_generator(count, start, stop)
-
-
-# Тесты для функции card_number_generator с полным покрытием
-@pytest.mark.parametrize(
-    "count, start, stop",
-    [
-        (5, 0, 9999999999999999),
-        (5, 1000000000000000, 9999999999999999),
-    ],
-)
-def test_card_number_generator_full_coverage(count: int, start: int, stop: int) -> None:
-    """
-    Тестирует функцию card_number_generator с полным покрытием диапазона номеров.
-
-    Args:
-        count (int): Количество номеров карт для генерации.
-        start (int): Начальный диапазон для генерации номеров.
-        stop (int): Конечный диапазон для генерации номеров.
-    """
-    cards = card_number_generator(count, start, stop)
-    assert len(cards) == count
-    assert all(isinstance(card, str) and len(card) == 19 for card in cards)
-
-    # Проверяем уникальность номеров
-    assert len(set(cards)) == count
-
-    # Проверяем, что номера карт в правильном диапазоне
-    for card in cards:
-        # Удаляем пробелы и преобразуем в число
-        card_number = int(card.replace(" ", ""))
-        assert start <= card_number <= stop
-
-    # Печатаем сгенерированные номера (для проверки)
-    print("Сгенерированные номера карт:")
-    for card in cards:
-        print(card)
+def test_card_number_generator(card_range: tuple[str, str], start: str, stop: str, expected: List[str]) -> None:
+    # Используем фикстуру card_range для получения начального и конечного значений
+    start, stop = card_range
+    result = list(islice(card_number_generator(start, stop), 9))
+    assert result == expected

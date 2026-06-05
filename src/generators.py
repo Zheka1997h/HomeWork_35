@@ -1,4 +1,4 @@
-import random
+from itertools import islice
 from typing import Dict, Generator, List
 
 
@@ -16,11 +16,11 @@ def filter_by_currency(transactions: List[Dict], currency: str) -> Generator:
         Dict: Транзакция (словарь), если код валюты в транзакции совпадает с переданным параметром.
 
     Example:
-        >>> transactions = [
-        ...     {'operationAmount': {'currency': {'code': 'USD'}}},
-        ...     {'operationAmount': {'currency': {'code': 'RUB'}}
-        ... ]
-        >>> list(filter_by_currency(transactions, 'USD'))
+        transactions = [
+             {'operationAmount': {'currency': {'code': 'USD'}}},
+        {'operationAmount': {'currency': {'code': 'RUB'}}
+        ]
+        list(filter_by_currency(transactions, 'USD'))
         [{'operationAmount': {'currency': {'code': 'USD'}}]
     """
     for transaction in transactions:
@@ -43,54 +43,59 @@ def transaction_descriptions(transactions: List[Dict]) -> Generator:
             'Описание ситуации не указано'.
 
     Example:
-        >>> transactions = [{'description': 'Покупка в магазине'}, {}]
-        >>> list(transaction_descriptions(transactions))
+        transactions = [{'description': 'Покупка в магазине'}, {}]
+        list(transaction_descriptions(transactions))
         ['Покупка в магазине', 'Описание ситуации не указано']
     """
     for transaction in transactions:
         yield transaction.get("description", "Описание ситуации не указано")
 
 
-def card_number_generator(count: int, start: int = 0, stop: int = 9999999999999999) -> set:
+def card_number_generator(start: str, stop: str) -> Generator[str, None, None]:
     """
-    Генерирует уникальные номера банковских карт в формате XXXX XXXX XXXX XXXX.
+    Генерирует номера банковских карт в заданном диапазоне.
+
+    Номера карт форматируются в виде "XXXX XXXX XXXX XXXX" (16 цифр с пробелами каждые 4 цифры).
 
     Args:
-        count (int): Количество уникальных номеров карт для генерации.
-        start (int, optional): Начальное значение диапазона генерации чисел.
-            По умолчанию 0.
-        stop (int, optional): Конечное значение диапазона генерации чисел
-            (включительно). По умолчанию 9999999999999999
-            (16‑значное максимальное число).
+        start (str): Начальный номер карты в формате "XXXX XXXX XXXX XXXX".
+            Может содержать пробелы, которые будут удалены перед обработкой.
+        stop (str): Конечный номер карты в формате "XXXX XXXX XXXX XXXX".
+            Может содержать пробелы, которые будут удалены перед обработкой.
 
-    Returns:
-        set: Множество строк с отформатированными номерами карт.
-            Каждый номер имеет вид 'XXXX XXXX XXXX XXXX'.
+    Yields:
+        str: Отформатированный номер карты в виде "XXXX XXXX XXXX XXXX".
 
     Raises:
-        ValueError: Если count отрицательный или если диапазон [start, stop]
-            не позволяет сгенерировать требуемое количество уникальных номеров.
+        ValueError: Если start или stop не могут быть преобразованы в целые числа
+            после удаления пробелов (некорректный формат номера карты).
 
-    Example:
-        >>> cards = card_number_generator(2)
-        >>> len(cards)
-        2
-        >>> all(isinstance(card, str) and len(card) == 19 for card in cards)
-        True
+    Examples:
+        >>> gen = card_number_generator("0000 0000 0000 0001", "0000 0000 0000 0003")
+        >>> list(gen)
+        ['0000 0000 0000 0001', '0000 0000 0000 0002']
+
+        >>> next(card_number_generator("1234 5678 9012 3456", "1234 5678 9012 3457"))
+        '1234 5678 9012 3456'
     """
-    if count < 0:
-        raise ValueError("Параметр count не может быть отрицательным")
-    if stop < start:
-        raise ValueError("Параметр stop должен быть больше или равен start")
+    try:
+        # Преобразуем начальное и конечное значение в числа
+        start_num = int(start.replace(" ", ""))
+        stop_num = int(stop.replace(" ", ""))
+    except ValueError:
+        raise ValueError("Некорректный формат номера карты")
 
-    generated_numbers: set[str] = set()
-    while len(generated_numbers) < count:
-        # Генерируем случайный номер карты в заданном диапазоне
-        num = random.randint(start, stop)  # число в диапазоне от start до stop
-        formatted_number = f"{num:016d}"
-        card_number = (
-            f"{formatted_number[:4]} {formatted_number[4:8]} " f"{formatted_number[8:12]} {formatted_number[12:]}"
-        )
-        generated_numbers.add(card_number)  # Добавляем номер в набор
+    # Генерируем все возможные номера карт в заданном диапазоне
+    for num in range(start_num, stop_num):
+        # Преобразуем число в строку с ведущими нулями
+        card_number = f"{num:016}"
+        # Форматируем строку в нужный формат "XXXX XXXX XXXX XXXX"
+        formatted_card_number = f"{card_number[:4]} {card_number[4:8]} {card_number[8:12]} {card_number[12:]}"
+        yield formatted_card_number
 
-    return generated_numbers  # Возвращаем сгенерированные номера
+
+# Пример использования
+start_card = "0000 0000 0000 0001"
+stop_card = "0000 0000 0000 0010"
+for card in islice(card_number_generator(start_card, stop_card), 10):
+    print(card)
