@@ -1,4 +1,3 @@
-from itertools import islice
 from typing import Dict, Generator, List
 
 
@@ -51,37 +50,12 @@ def transaction_descriptions(transactions: List[Dict]) -> Generator:
         yield transaction.get("description", "Описание ситуации не указано")
 
 
-def card_number_generator(start: str, stop: str) -> Generator[str, None, None]:
-    """
-    Генерирует номера банковских карт в заданном диапазоне.
+def card_number_generator(start: int, stop: int) -> Generator[str, None, None]:
 
-    Номера карт форматируются в виде "XXXX XXXX XXXX XXXX" (16 цифр с пробелами каждые 4 цифры).
-
-    Args:
-        start (str): Начальный номер карты в формате "XXXX XXXX XXXX XXXX".
-            Может содержать пробелы, которые будут удалены перед обработкой.
-        stop (str): Конечный номер карты в формате "XXXX XXXX XXXX XXXX".
-            Может содержать пробелы, которые будут удалены перед обработкой.
-
-    Yields:
-        str: Отформатированный номер карты в виде "XXXX XXXX XXXX XXXX".
-
-    Raises:
-        ValueError: Если start или stop не могут быть преобразованы в целые числа
-            после удаления пробелов (некорректный формат номера карты).
-
-    Examples:
-        >>> gen = card_number_generator("0000 0000 0000 0001", "0000 0000 0000 0003")
-        >>> list(gen)
-        ['0000 0000 0000 0001', '0000 0000 0000 0002']
-
-        >>> next(card_number_generator("1234 5678 9012 3456", "1234 5678 9012 3457"))
-        '1234 5678 9012 3456'
-    """
     try:
         # Преобразуем начальное и конечное значение в числа
-        start_num = int(start.replace(" ", ""))
-        stop_num = int(stop.replace(" ", ""))
+        start_num = start
+        stop_num = stop
     except ValueError:
         raise ValueError("Некорректный формат номера карты")
 
@@ -91,11 +65,11 @@ def card_number_generator(start: str, stop: str) -> Generator[str, None, None]:
         card_number = f"{num:016}"
         # Форматируем строку в нужный формат "XXXX XXXX XXXX XXXX"
         formatted_card_number = f"{card_number[:4]} {card_number[4:8]} {card_number[8:12]} {card_number[12:]}"
+
         yield formatted_card_number
 
 
-# Пример использования
-start_card = "0000 0000 0000 0001"
-stop_card = "0000 0000 0000 0010"
-for card in islice(card_number_generator(start_card, stop_card), 10):
-    print(card)
+generator = card_number_generator(1, 5)
+
+for card_number in generator:
+    print(card_number)

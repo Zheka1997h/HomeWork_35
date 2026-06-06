@@ -1,4 +1,3 @@
-from itertools import islice
 from typing import Dict, List
 
 import pytest
@@ -72,38 +71,35 @@ def test_transaction_descriptions(transactions: List, expected: List[str]) -> No
 # Фикстура для установки начального и конечного значений
 
 
-@pytest.fixture
-def card_range():
-    start_card = "0000 0000 0000 0001"
-    stop_card = "0000 0000 0000 0010"
-    return start_card, stop_card
+# Тестируем генерацию номеров карт
+
+# Ожидаемый результат
+expected_results = ["0000 0000 0000 0001", "0000 0000 0000 0002", "0000 0000 0000 0003", "0000 0000 0000 0004"]
 
 
-# Параметризированный тест для проверки генерации номеров карт
+# Создаем тест
+@pytest.mark.parametrize("start, stop, expected", [(1, 5, expected_results)])
+def test_card_number_generator(start: int, stop: int, expected: List[int]) -> None:
+    # Запускаем генератор
+    generator = card_number_generator(start, stop)
+
+    # Проверяем, что сгенерированные номера карт совпадают с ожидаемыми
+    assert list(generator) == expected
 
 
-@pytest.mark.parametrize(
-    "start, stop, expected",
-    [
-        (
-            "0000 0000 0000 0001",
-            "0000 0000 0000 0010",
-            [
-                "0000 0000 0000 0001",
-                "0000 0000 0000 0002",
-                "0000 0000 0000 0003",
-                "0000 0000 0000 0004",
-                "0000 0000 0000 0005",
-                "0000 0000 0000 0006",
-                "0000 0000 0000 0007",
-                "0000 0000 0000 0008",
-                "0000 0000 0000 0009",
-            ],
-        )
-    ],
-)
-def test_card_number_generator(card_range: tuple[str, str], start: str, stop: str, expected: List[str]) -> None:
-    # Используем фикстуру card_range для получения начального и конечного значений
-    start, stop = card_range
-    result = list(islice(card_number_generator(start, stop), 9))
-    assert result == expected
+# Функция, которая может вызвать исключение
+# Это пример, так что замени его на свою функцию
+
+
+def check_card_number(card_number) -> None:
+    if not isinstance(card_number, str):
+        raise ValueError("Некорректный формат номера карты")
+    # ... другой код
+
+
+# Тестовая функция
+
+
+def test_check_card_number_raises_value_error() -> None:
+    with pytest.raises(ValueError, match="Некорректный формат номера карты"):
+        check_card_number(1234567890123456)  # Передаем некорректный формат, например, число вместо строки
