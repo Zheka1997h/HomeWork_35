@@ -132,7 +132,7 @@ amount_in_rub = convert_transaction_to_rub(transaction)
 print(f"Сумма в рублях: {amount_in_rub}")
 ```
 
-### Генерация номеров карт
+### 6. Генерация номеров карт
 
 ```bash
 from src.generators import card_number_generator
