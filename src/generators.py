@@ -1,49 +1,47 @@
-from typing import Dict, Generator, List
+from typing import Any, Dict, Generator, List
 
 
-def filter_by_currency(transactions: List[Dict], currency: str) -> Generator:
-    """
-    Фильтрация транзакций по валюте.
+def filter_by_currency(transactions: List[Dict[str, Any]], currency: str) -> Generator[Dict[str, Any], None, None]:
+    """Фильтрация транзакций по валюте.
 
     Args:
-        transactions (List[Dict]): Список транзакций. Каждая транзакция — словарь,
+        transactions: Список транзакций. Каждая транзакция — словарь,
             который может содержать вложенную структуру с информацией о валюте
             в поле 'operationAmount' -> 'currency' -> 'code'.
-        currency (str): Валюта, по которой выполняется фильтрация (например, 'USD', 'RUB').
+        currency: Валюта, по которой выполняется фильтрация (например, 'USD', 'RUB').
 
     Yields:
-        Dict: Транзакция (словарь), если код валюты в транзакции совпадает с переданным параметром.
+        Транзакция (словарь), если код валюты совпадает с переданным параметром.
 
     Example:
-        transactions = [
-             {'operationAmount': {'currency': {'code': 'USD'}}},
-        {'operationAmount': {'currency': {'code': 'RUB'}}
-        ]
-        list(filter_by_currency(transactions, 'USD'))
-        [{'operationAmount': {'currency': {'code': 'USD'}}]
+        >>> transactions = [
+        ...     {'operationAmount': {'currency': {'code': 'USD'}}},
+        ...     {'operationAmount': {'currency': {'code': 'RUB'}}}
+        ... ]
+        >>> list(filter_by_currency(transactions, 'USD'))
+        [{'operationAmount': {'currency': {'code': 'USD'}}}]
     """
     for transaction in transactions:
-        # Извлекаем код валюты из вложенной структуры
         if transaction.get("operationAmount", {}).get("currency", {}).get("code") == currency:
             yield transaction
 
 
-def transaction_descriptions(transactions: List[Dict]) -> Generator:
-    """
-    Генерация описаний транзакций.
+def transaction_descriptions(
+    transactions: List[Dict[str, Any]],
+) -> Generator[str, None, None]:
+    """Генерация описаний транзакций.
 
     Args:
-        transactions (List[Dict]): Список транзакций. Каждая транзакция — словарь,
+        transactions: Список транзакций. Каждая транзакция — словарь,
             который может содержать поле 'description'.
 
     Yields:
-        str: Описание транзакции из поля 'description', если оно есть.
-            Если поле отсутствует или пусто, возвращается строка
-            'Описание ситуации не указано'.
+        Описание транзакции из поля 'description'. Если поле отсутствует,
+        возвращается строка 'Описание ситуации не указано'.
 
     Example:
-        transactions = [{'description': 'Покупка в магазине'}, {}]
-        list(transaction_descriptions(transactions))
+        >>> transactions = [{'description': 'Покупка в магазине'}, {}]
+        >>> list(transaction_descriptions(transactions))
         ['Покупка в магазине', 'Описание ситуации не указано']
     """
     for transaction in transactions:
@@ -51,25 +49,36 @@ def transaction_descriptions(transactions: List[Dict]) -> Generator:
 
 
 def card_number_generator(start: int, stop: int) -> Generator[str, None, None]:
+    """Генератор номеров банковских карт в заданном диапазоне.
 
-    try:
-        # Преобразуем начальное и конечное значение в числа
-        start_num = start
-        stop_num = stop
-    except ValueError:
-        raise ValueError("Некорректный формат номера карты")
+    Args:
+        start: Начальное значение диапазона (включительно).
+        stop: Конечное значение диапазона (не включительно).
 
-    # Генерируем все возможные номера карт в заданном диапазоне
-    for num in range(start_num, stop_num):
-        # Преобразуем число в строку с ведущими нулями
-        card_number = f"{num:016}"
-        # Форматируем строку в нужный формат "XXXX XXXX XXXX XXXX"
-        formatted_card_number = f"{card_number[:4]} {card_number[4:8]} {card_number[8:12]} {card_number[12:]}"
+    Yields:
+        Номер карты в формате "XXXX XXXX XXXX XXXX".
 
+    Example:
+        >>> list(card_number_generator(1, 3))
+        ['0000 0000 0000 0001', '0000 0000 0000 0002']
+    """
+    for num in range(start, stop):
+        card_number = f"{num:016d}"
+        formatted_card_number = f"{card_number[:4]} {card_number[4:8]} " f"{card_number[8:12]} {card_number[12:]}"
         yield formatted_card_number
 
 
-generator = card_number_generator(1, 5)
+def check_card_number(card_number: Any) -> None:
+    """Проверяет корректность формата номера карты.
 
-for card_number in generator:
-    print(card_number)
+    Номер карты должен быть строкой. Если передан другой тип —
+    выбрасывается ValueError.
+
+    Args:
+        card_number: Номер карты (должен быть строкой).
+
+    Raises:
+        ValueError: Если номер карты не является строкой.
+    """
+    if not isinstance(card_number, str):
+        raise ValueError("Некорректный формат номера карты")

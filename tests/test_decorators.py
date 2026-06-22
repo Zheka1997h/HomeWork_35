@@ -1,5 +1,6 @@
 # tests/test_decorators.py
 import os
+from collections.abc import Iterator
 
 import pytest
 
@@ -73,7 +74,7 @@ def error_func() -> None:
 class TestLogDecorator:
     """Набор тестов для проверки функциональности декоратора log."""
 
-    def test_successful_execution_console(self, capsys: pytest.CaptureFixture) -> None:
+    def test_successful_execution_console(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Тест успешного выполнения функции с логированием в консоль.
 
         Проверяет, что:
@@ -81,12 +82,12 @@ class TestLogDecorator:
         - В консоль выводится сообщение об успешном выполнении.
         - Возвращаемое значение корректно.
         """
-        result = successful_function(3, 5)
+        result: int = successful_function(3, 5)
         captured = capsys.readouterr()
         assert "successful_function ok" in captured.out
         assert result == 8
 
-    def test_error_execution_console(self, capsys: pytest.CaptureFixture) -> None:
+    def test_error_execution_console(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Тест обработки ошибки с логированием в консоль.
 
         Проверяет, что:
@@ -116,7 +117,7 @@ class TestLogDecorator:
 
         try:
             with open("test_log.txt", "r", encoding="utf-8") as f:
-                content = f.read()
+                content: str = f.read()
             assert "file_log_function ok" in content
         except (IOError, OSError) as e:
             pytest.fail(f"Не удалось прочитать файл логов: {e}")
@@ -139,13 +140,13 @@ class TestLogDecorator:
 
         try:
             with open("test_log.txt", "r", encoding="utf-8") as f:
-                content = f.read()
+                content: str = f.read()
             assert "error_func error: TypeError" in content
             assert "Inputs: (), {}" in content
         except (IOError, OSError) as e:
             pytest.fail(f"Не удалось прочитать файл логов: {e}")
 
-    def test_function_arguments_logging(self, capsys: pytest.CaptureFixture) -> None:
+    def test_function_arguments_logging(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Тест логирования аргументов функции.
 
         Проверяет, что:
@@ -168,7 +169,7 @@ class TestLogDecorator:
         assert "func_with_args ok" in captured.out
 
     @pytest.fixture(autouse=True)
-    def cleanup_files(self) -> None:
+    def cleanup_files(self) -> Iterator[None]:
         """Очистка тестовых файлов после тестов.
 
         Автоматически выполняемая фикстура, которая гарантирует удаление временного
