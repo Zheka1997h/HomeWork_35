@@ -11,6 +11,7 @@
 - 📄 Чтение данных из JSON-файла
 - 📊 Генерация описаний транзакций и номеров карт
 - 📝 Логирование вызовов функций через декоратор
+- 📄  Чтение данных из Csv-файла.
 
 ## 🛠 Технологии
 
@@ -49,7 +50,14 @@ pip install -r requirements.txt
 ```bash
 HomeWork_35/
 ├── data/
+│   ├── transactions.csv
+│   ├── transactions_excel.xlsx
 │   └── operations.json          # Данные о банковских операциях
+│
+│   ├── logs/                    # Логирование (вывод информации в файл)
+│   ├── masks.log
+│   └── utils.log
+│    
 ├── src/
 │   ├── __init__.py
 │   ├── masks.py                 # Маскировка номеров карт и счетов
@@ -57,6 +65,7 @@ HomeWork_35/
 │   ├── processing.py            # Фильтрация и сортировка транзакций
 │   ├── generators.py            # Генераторы описаний и номеров карт
 │   ├── decorators.py            # Декоратор для логирования
+│   ├── transactions.py          # Чтение Сsv и Ecxel файла черз csv и pandas
 │   ├── utils.py                 # Чтение JSON-файлов
 │   └── external_api.py          # Конвертация валют через API
 ├── tests/
@@ -66,6 +75,7 @@ HomeWork_35/
 │   ├── test_processing.py
 │   ├── test_generators.py
 │   ├── test_decorators.py
+│   ├── test_transactions.py
 │   ├── test_utils.py
 │   └── test_external_api.py
 ├── .env                         # Переменные окружения (НЕ в Git)
@@ -221,6 +231,8 @@ python -m pytest tests/test_external_api.py
 - `decorators.py:` -  Скрипт декоратор регистрирующий детали выполнения функций.
 
 - `utils.py:` -  Скрипт реализует функцию чтения файла json
+  
+- 'transactions.py' - Скрипт реализует функцию чтения файла Csv
 
 - `external_api.py:` -  Скрипт реализует конвертацию EUR или USD в RUB
 
@@ -235,6 +247,8 @@ python -m pytest tests/test_external_api.py
 - `test_decorators.py` - модуль для тестирования декоратора функции
 
 - `test_utils.py` - модуль для тестрирования функции чтения json файла
+
+- `test_transactions.py` - модуль для тестрирования функции чтения csv файла
 
 - `test_external.py` - модуль для тестирования функции конвертации USD и EUR в RUB
 
