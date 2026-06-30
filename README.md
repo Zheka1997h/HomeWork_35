@@ -213,10 +213,13 @@ python -m pytest tests/test_widget.py
 python -m pytest tests/test_decorators.py
 ```
 ```bash
-python -m pytest tests/test_utils.py
+python -m Mock и Patch  tests/test_utils.py
 ```
 ```bash
-python -m pytest tests/test_external_api.py
+python -m Mock и Patch  tests/test_external_api.py
+```
+```bash
+python -m Mock и Patch tests/test_transactions.py
 ```
 
 ### 10. Структура проекта
