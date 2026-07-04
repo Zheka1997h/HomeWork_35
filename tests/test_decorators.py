@@ -193,7 +193,7 @@ class TestLogDecorator:
         try:
             if os.path.exists("test_log.txt"):
                 os.remove("test_log.txt")
-        except (PermissionError, OSError):
+        except PermissionError, OSError:
             # Игнорируем ошибки доступа — файл может быть занят другим процессом
             # или находиться в состоянии, не позволяющем удаление
             pass

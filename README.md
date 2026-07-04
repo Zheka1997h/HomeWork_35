@@ -15,7 +15,7 @@
 
 ## 🛠 Технологии
 
-- **Python 3.11+**
+- **Python 3.14.5**
 - **requests** — работа с внешним API
 - **python-dotenv** — управление переменными окружения
 - **pytest** — тестирование
@@ -68,6 +68,8 @@ HomeWork_35/
 │   ├── decorators.py            # Декоратор для логирования
 │   ├── transactions.py          # Чтение Сsv и Ecxel файла черз csv и pandas
 │   ├── utils.py                 # Чтение JSON-файлов
+│   ├── main.py    
+│   ├── bank_search.py
 │   └── external_api.py          # Конвертация валют через API
 ├── tests/
 │   ├── __init__.py
@@ -78,6 +80,8 @@ HomeWork_35/
 │   ├── test_decorators.py
 │   ├── test_transactions.py
 │   ├── test_utils.py
+│   ├── test/main.py
+│   ├── test/bank_search.py
 │   └── test_external_api.py
 ├── .env                         # Переменные окружения (НЕ в Git)
 ├── .env.example                 # Шаблон переменных окружения
@@ -187,6 +191,22 @@ result = my_function(3, 5)
 # В файл logs.txt запишется: "2026-06-22 12:00:00 my_function ok"
 ```
 
+```bash
+- ✅ Функция `process_bank_search` с использованием `re`
+```
+
+```bash
+- ✅ Функция `process_bank_operations` с использованием `Counter`
+```
+
+```bash
+- ✅ CLI в `main()` с полным функционалом
+```
+
+```bash
+- ✅ Тесты с покрытием 80%+
+```
+
 ### 9. Тестирование
 
 Для тестирования модулей  выполните следующие шаги:
@@ -222,6 +242,14 @@ python -m Mock и Patch  tests/test_external_api.py
 python -m Mock и Patch tests/test_transactions.py
 ```
 
+```bash
+python -m pytest tests/test_main.py
+```
+
+```bash
+python -m pytest test_bank_search.py
+```
+
 ### 10. Структура проекта
 
 - `masks.py:`-  Скрипт реализует маскрировку карт и транзакций по ним.
@@ -240,6 +268,10 @@ python -m Mock и Patch tests/test_transactions.py
 
 - `external_api.py:` -  Скрипт реализует конвертацию EUR или USD в RUB
 
+- `bank_search.py` -  Скрипт реализует функции подсчета банковских операций.
+
+- `main.py` -  Скрипт реализует сборку всего проекта(точка входа)
+
 - `test_masks.py:` - модкль для тестрирования маскировки карт и транзакций
 
 - `test_proccesings.py:` - модуль для тестирования транзакций по картам
@@ -255,6 +287,10 @@ python -m Mock и Patch tests/test_transactions.py
 - `test_transactions.py` - модуль для тестрирования функции чтения csv файла
 
 - `test_external.py` - модуль для тестирования функции конвертации USD и EUR в RUB
+
+- `test_bank_search.py` - модуль для тестирования поиска банковских операций
+
+- `test_main.py` - модуль для тестирования сборки программы
 
 - `.env` - модуль безопасности чувствительных дынных
 
