@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from typing import Any, Dict
 from unittest.mock import MagicMock, Mock, patch
 

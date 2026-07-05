@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from unittest.mock import MagicMock, mock_open, patch
 
 from src.utils import read_json_file

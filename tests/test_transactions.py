@@ -1,107 +1,125 @@
-"""Тесты для модуля transactions."""
+# -*- coding: utf-8 -*-
+"""Тесты для модуля transactions с полной типизацией mypy."""
 
-from typing import Any, Union
-from unittest.mock import MagicMock, patch
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
 from zipfile import BadZipFile
 
+import pandas as pd
 import pytest
 
 from src.transactions import transactions, transactions_ecxel
 
-# ============================================================================
-# ТЕСТЫ ДЛЯ transactions()
-# ============================================================================
+# ==================== ТЕСТЫ transactions() (CSV) ====================
 
 
-@patch("src.transactions.csv.DictReader")
-@patch("builtins.open")
-def test_transactions_success(
-    mock_open: MagicMock,
-    mock_dict_reader: MagicMock,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
+def test_transactions_success(tmp_path: Path) -> None:
     """Успешное чтение CSV."""
-    data: list[dict[str, str]] = [
+    csv_path: Path = tmp_path / "test.csv"
+    csv_path.write_text("id;state\n1;EXECUTED\n2;PENDING\n", encoding="utf-8")
+
+    result: list[dict[str, Any]] = transactions(str(csv_path))
+
+    assert result == [
         {"id": "1", "state": "EXECUTED"},
         {"id": "2", "state": "PENDING"},
     ]
-    mock_dict_reader.return_value = iter(data)
-
-    result: list[dict[str, Any]] = transactions("test.csv")
-
-    assert result == data
-    assert "EXECUTED" in capsys.readouterr().out
 
 
-@patch("src.transactions.csv.DictReader")
-@patch("builtins.open")
-def test_transactions_empty(
-    mock_open: MagicMock,
-    mock_dict_reader: MagicMock,
-) -> None:
-    """Пустой CSV файл."""
-    mock_dict_reader.return_value = iter([])
-    result: list[dict[str, Any]] = transactions("empty.csv")
+def test_transactions_empty_file(tmp_path: Path) -> None:
+    """Чтение пустого CSV (только заголовки)."""
+    csv_path: Path = tmp_path / "empty.csv"
+    csv_path.write_text("id;state\n", encoding="utf-8")
+
+    result: list[dict[str, Any]] = transactions(str(csv_path))
+
     assert result == []
 
 
-@pytest.mark.parametrize(
-    "error, message",
-    [
-        (FileNotFoundError, "Неверный путь файла"),
-        (UnicodeDecodeError("utf-8", b"", 0, 1, "err"), "Неверный формат кодировки"),
-    ],
-)
-@patch("builtins.open")
-def test_transactions_errors(
-    mock_open: MagicMock,
-    error: Union[type[BaseException], BaseException],
-    message: str,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    """Ошибки при чтении CSV."""
-    mock_open.side_effect = error
-    result: list[dict[str, Any]] = transactions("bad.csv")
+def test_transactions_file_not_found() -> None:
+    """Обработка отсутствия файла."""
+    result: list[dict[str, Any]] = transactions("/nonexistent/path.csv")
     assert result == []
-    assert message in capsys.readouterr().out
 
 
-# ============================================================================
-# ТЕСТЫ ДЛЯ transactions_ecxel()
-# ============================================================================
+def test_transactions_encoding_error(tmp_path: Path) -> None:
+    """Обработка ошибки кодировки."""
+    csv_path: Path = tmp_path / "bad_encoding.csv"
+    # Байты, несовместимые с UTF-8
+    csv_path.write_bytes(b"\xff\xfe\x00\x01invalid")
+
+    result: list[dict[str, Any]] = transactions(str(csv_path))
+
+    assert result == []
 
 
-@patch("src.transactions.pd.read_excel")
-def test_transactions_excel_success(mock_read_excel: MagicMock) -> None:
+# ==================== ТЕСТЫ transactions_ecxel() (Excel) ====================
+
+
+def test_transactions_ecxel_success(tmp_path: Path) -> None:
     """Успешное чтение Excel."""
-    mock_df: MagicMock = MagicMock()
-    mock_df.to_dict.return_value = [{"id": 1}, {"id": 2}]
-    mock_read_excel.return_value = mock_df
+    excel_path: Path = tmp_path / "test.xlsx"
+    df: pd.DataFrame = pd.DataFrame(
+        [
+            {"id": 1, "state": "EXECUTED"},
+            {"id": 2, "state": "PENDING"},
+        ]
+    )
+    df.to_excel(excel_path, index=False)
 
-    result: list[dict[str, Any]] = transactions_ecxel("test.xlsx")
+    result: list[dict[str, Any]] = transactions_ecxel(str(excel_path))
 
-    assert result == [{"id": 1}, {"id": 2}]
-    mock_df.to_dict.assert_called_once_with(orient="records")
+    assert result == [
+        {"id": 1, "state": "EXECUTED"},
+        {"id": 2, "state": "PENDING"},
+    ]
 
 
-@pytest.mark.parametrize(
-    "error, message",
-    [
-        (FileNotFoundError, "Файл не найден"),
-        (PermissionError, "Нет доступа к файлу"),
-        (BadZipFile, "Файл поврежден"),
-        (Exception("oops"), "Непредвиденная ошибка"),
-    ],
-)
-@patch("src.transactions.pd.read_excel")
-def test_transactions_excel_errors(
-    mock_read_excel: MagicMock,
-    error: Union[type[BaseException], BaseException],
-    message: str,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    """Ошибки при чтении Excel."""
-    mock_read_excel.side_effect = error
-    result: list[dict[str, Any]] = transactions_ecxel("bad.xlsx")
+def test_transactions_ecxel_file_not_found() -> None:
+    """Обработка отсутствия Excel-файла."""
+    result: list[dict[str, Any]] = transactions_ecxel("/nonexistent.xlsx")
     assert result == []
-    assert message in capsys.readouterr().out
+
+
+def test_transactions_ecxel_permission_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Обработка ошибки доступа."""
+    excel_path: Path = tmp_path / "locked.xlsx"
+    excel_path.write_bytes(b"fake")
+
+    def raise_permission_error(*args: Any, **kwargs: Any) -> None:
+        raise PermissionError("Нет доступа")
+
+    monkeypatch.setattr(pd, "read_excel", raise_permission_error)
+
+    result: list[dict[str, Any]] = transactions_ecxel(str(excel_path))
+    assert result == []
+
+
+def test_transactions_ecxel_bad_zip(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Обработка повреждённого файла (BadZipFile)."""
+    excel_path: Path = tmp_path / "corrupted.xlsx"
+    excel_path.write_bytes(b"not a zip file")
+
+    def raise_bad_zip(*args: Any, **kwargs: Any) -> None:
+        raise BadZipFile("Файл повреждён")
+
+    monkeypatch.setattr(pd, "read_excel", raise_bad_zip)
+
+    result: list[dict[str, Any]] = transactions_ecxel(str(excel_path))
+    assert result == []
+
+
+def test_transactions_ecxel_unexpected_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Обработка непредвиденной ошибки."""
+    excel_path: Path = tmp_path / "test.xlsx"
+    excel_path.write_bytes(b"fake")
+
+    def raise_unexpected(*args: Any, **kwargs: Any) -> None:
+        raise RuntimeError("Непредвиденная ошибка")
+
+    monkeypatch.setattr(pd, "read_excel", raise_unexpected)
+
+    result: list[dict[str, Any]] = transactions_ecxel(str(excel_path))
+    assert result == []

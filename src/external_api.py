@@ -1,12 +1,16 @@
+# -*- coding: utf-8 -*-
 import os
 from typing import Any, Dict
 
 import requests
 from dotenv import load_dotenv
 
+from src.decorators import log
+
 load_dotenv()
 
 
+@log()
 def get_exchange_rate(base_currency: str) -> float:
     """Получает курс валюты относительно RUB через API."""
     api_key: str | None = os.getenv("API")
@@ -24,15 +28,17 @@ def get_exchange_rate(base_currency: str) -> float:
     return float(data["rates"]["RUB"])
 
 
+@log()
 def convert_transaction_to_rub(transaction: Dict[str, Any]) -> float:
+    """Конвертирует транзакцию в рубли."""
     operation_amount = transaction.get("operationAmount", {})
     amount_str = operation_amount.get("amount", "0")
-    currency_info = operation_amount.get("currency", {})  # Исправлено: добавлен .get()
+    currency_info = operation_amount.get("currency", {})
     currency_code = currency_info.get("code", "RUB")
 
     amount = float(amount_str)
 
-    if currency_code == "RUB":  # Добавлено: корректная обработка рублей
+    if currency_code == "RUB":
         return amount
     elif currency_code in ("USD", "EUR"):
         rate: float = get_exchange_rate(currency_code)

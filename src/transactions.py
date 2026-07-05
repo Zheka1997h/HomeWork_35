@@ -1,21 +1,23 @@
+# -*- coding: utf-8 -*-
 import csv
 from typing import Any, cast
 from zipfile import BadZipFile
 
 import pandas as pd
 
+from src.decorators import log
 
+
+@log()
 def transactions(file_reads: str) -> list[dict[str, Any]]:
+    """Читает CSV файл и возвращает список словарей."""
     try:
         with open(file_reads, "r", encoding="utf-8") as file:
             reader = csv.DictReader(file, delimiter=";")
             data = list(reader)
         if not data:
             return []
-        else:
-            for row in data:
-                print(row)
-            return data
+        return data
     except FileNotFoundError:
         print("Неверный путь файла")
         return []
@@ -24,11 +26,9 @@ def transactions(file_reads: str) -> list[dict[str, Any]]:
         return []
 
 
-file_read = r"/data/transactions.csv"
-transactions(file_read)
-
-
+@log()
 def transactions_ecxel(path_file: str) -> list[dict[str, Any]]:
+    """Читает Excel файл и возвращает список словарей."""
     try:
         excel_file = pd.read_excel(path_file)
         return cast(list[dict[str, Any]], excel_file.to_dict(orient="records"))
@@ -44,6 +44,3 @@ def transactions_ecxel(path_file: str) -> list[dict[str, Any]]:
     except Exception as e:
         print(f"Непредвиденная ошибка: {e}")
         return []
-
-
-print(transactions_ecxel(r"C:\Users\Zheka1998\Desktop\TaskОne_2\data\transactions_excel.xlsx"))

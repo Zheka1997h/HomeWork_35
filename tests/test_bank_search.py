@@ -1,5 +1,6 @@
 """Тесты для модуля bank_search."""
 
+# -*- coding: utf-8 -*-
 from typing import Any
 
 import pytest

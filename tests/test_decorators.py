@@ -1,199 +1,157 @@
-# tests/test_decorators.py
-import os
-from collections.abc import Iterator
+# -*- coding: utf-8 -*-
+"""Компактные тесты декоратора log() со 100% покрытием."""
+
+from __future__ import annotations
+
+import logging
+from pathlib import Path
+from typing import Dict, Iterator
 
 import pytest
 
 from src.decorators import log
 
-
-@log()
-def successful_function(x: int, y: int) -> int:
-    """Простая функция сложения для тестирования успешного выполнения.
-
-    Args:
-        x: Первое слагаемое.
-        y: Второе слагаемое.
-
-    Returns:
-        Сумма x и y.
-    """
-    return x + y
+# ==================== ФИКСТУРА ИЗОЛЯЦИИ ====================
 
 
-@log()
-def failing_function() -> None:
-    """Функция, которая всегда вызывает ошибку для тестирования обработки исключений.
-
-    Raises:
-        ValueError: Всегда выбрасывается с сообщением "Test error".
-    """
-    raise ValueError("Test error")
-
-
-@log(filename="test_log.txt")
-def file_log_function(a: int, b: int, c: int = 0) -> int:
-    """Функция для тестирования логирования в файл при успешном выполнении.
+@pytest.fixture(autouse=True)
+def isolate_loggers(tmp_path: Path) -> Iterator[Dict[str, str]]:
+    """Изолирует логгеры в tmp_path для каждого теста.
 
     Args:
-        a: Первый множитель.
-        b: Второй множитель.
-        c: Слагаемое (по умолчанию 0).
+        tmp_path: Фикстура pytest для создания временных файлов.
 
-    Returns:
-        Результат выражения a * b + c.
+    Yields:
+        Словарь с путями к лог-файлам.
     """
-    return a * b + c
+    success_path: Path = tmp_path / "success.log"
+    errors_path: Path = tmp_path / "erros.log"
+
+    success_log: str = str(success_path)
+    errors_log: str = str(errors_path)
+
+    # Очищаем старые хэндлеры
+    logger_name: str
+    for logger_name in ["success", "errors"]:
+        logger: logging.Logger = logging.getLogger(logger_name)
+        handler: logging.Handler
+        for handler in logger.handlers[:]:
+            handler.close()
+            logger.removeHandler(handler)
+
+    # Создаём новые хэндлеры с временными путями
+    success_logger: logging.Logger = logging.getLogger("success")
+    success_handler: logging.FileHandler = logging.FileHandler(success_log, mode="a", encoding="utf-8")
+    success_handler.setFormatter(logging.Formatter("%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
+    success_logger.addHandler(success_handler)
+
+    error_logger: logging.Logger = logging.getLogger("errors")
+    error_handler: logging.FileHandler = logging.FileHandler(errors_log, mode="a", encoding="utf-8")
+    error_handler.setFormatter(
+        logging.Formatter("%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+    )
+    error_logger.addHandler(error_handler)
+
+    # Сохраняем пути для доступа из тестов
+    monkeypatch_paths: Dict[str, str] = {
+        "success_log": success_log,
+        "errors_log": errors_log,
+    }
+
+    yield monkeypatch_paths
+
+    # Очистка после теста
+    for logger_name in ["success", "errors"]:
+        logger = logging.getLogger(logger_name)
+        for handler in logger.handlers[:]:
+            handler.close()
+            logger.removeHandler(handler)
 
 
-@log()
-def func_with_args(a: int, b: int, c: str = "default") -> int:
-    """Функция с аргументами для тестирования логирования аргументов.
-
-    Args:
-        a: Первое число.
-        b: Второе число.
-        c: Строковый параметр (по умолчанию "default").
-
-    Returns:
-        Сумма a и b.
-    """
-    return a + b
+# ==================== ТЕСТЫ ====================
 
 
-@log(filename="test_log.txt")
-def error_func() -> None:
-    """Функция, вызывающая TypeError для тестирования логирования ошибок в файл.
+def test_successful_execution(isolate_loggers: Dict[str, str]) -> None:
+    """Тест успешного выполнения: возврат значения + запись в success.log."""
 
-    Raises:
-        TypeError: Всегда выбрасывается с сообщением "File error test".
-    """
-    raise TypeError("File error test")
+    @log()
+    def add(a: int, b: int) -> int:
+        return a + b
+
+    result: int = add(3, 5)
+
+    assert result == 8, "Декоратор не должен менять возвращаемое значение"
+
+    content: str = open(isolate_loggers["success_log"], encoding="utf-8").read()
+    assert "add ok" in content
+    assert "args=(3, 5)" in content
+    assert "kwargs={}" in content
 
 
-class TestLogDecorator:
-    """Набор тестов для проверки функциональности декоратора log."""
+def test_error_execution(isolate_loggers: Dict[str, str]) -> None:
+    """Тест ошибки: исключение пробрасывается + запись в errors.log."""
 
-    def test_successful_execution_console(self, capsys: pytest.CaptureFixture[str]) -> None:
-        """Тест успешного выполнения функции с логированием в консоль.
+    @log()
+    def fail() -> None:
+        raise ValueError("boom")
 
-        Проверяет, что:
-        - Функция выполняется без ошибок.
-        - В консоль выводится сообщение об успешном выполнении.
-        - Возвращаемое значение корректно.
-        """
-        result: int = successful_function(3, 5)
-        captured = capsys.readouterr()
-        assert "successful_function ok" in captured.out
-        assert result == 8
+    with pytest.raises(ValueError, match="boom"):
+        fail()
 
-    def test_error_execution_console(self, capsys: pytest.CaptureFixture[str]) -> None:
-        """Тест обработки ошибки с логированием в консоль.
+    content: str = open(isolate_loggers["errors_log"], encoding="utf-8").read()
+    assert "fail error: ValueError" in content
+    assert "args=()" in content
+    assert "Message: boom" in content
 
-        Проверяет, что:
-        - При возникновении ошибки она корректно перехватывается.
-        - В консоль выводится информация об ошибке.
-        - Тип ошибки указан верно.
-        """
-        with pytest.raises(ValueError):
-            failing_function()
-        captured = capsys.readouterr()
-        assert "failing_function error: ValueError" in captured.out
 
-    def test_file_logging_successful(self) -> None:
-        """Тест логирования в файл при успешном выполнении.
+def test_kwargs_logging(isolate_loggers: Dict[str, str]) -> None:
+    """Тест логирования именованных аргументов."""
 
-        Проверяет, что:
-        - Файл логов создаётся при успешном вызове.
-        - В файл записывается сообщение об успехе.
-        - Содержимое файла соответствует ожиданиям.
-        """
-        if os.path.exists("test_log.txt"):
-            os.remove("test_log.txt")
+    @log()
+    def greet(name: str, age: int = 25) -> str:
+        return f"{name}-{age}"
 
-        file_log_function(2, 3, c=1)
+    result: str = greet("Alice", age=30)
 
-        assert os.path.exists("test_log.txt"), "Файл логов не создан"
+    assert result == "Alice-30"
 
-        try:
-            with open("test_log.txt", "r", encoding="utf-8") as f:
-                content: str = f.read()
-            assert "file_log_function ok" in content
-        except (IOError, OSError) as e:
-            pytest.fail(f"Не удалось прочитать файл логов: {e}")
+    content: str = open(isolate_loggers["success_log"], encoding="utf-8").read()
+    assert "greet ok" in content
+    assert "args=('Alice',)" in content
+    assert "kwargs={'age': 30}" in content
 
-    def test_file_logging_error(self) -> None:
-        """Тест логирования в файл при ошибке.
 
-        Проверяет, что:
-        - Файл логов создаётся даже при ошибке.
-        - В файл записывается информация об ошибке и входных данных.
-        - Сообщение содержит корректный тип ошибки.
-        """
-        if os.path.exists("test_log.txt"):
-            os.remove("test_log.txt")
+def test_preserves_metadata() -> None:
+    """Тест, что functools.wraps сохраняет имя и docstring."""
 
-        with pytest.raises(TypeError):
-            error_func()
+    @log()
+    def my_func() -> None:
+        """Моя документация."""
 
-        assert os.path.exists("test_log.txt"), "Файл логов не создан при ошибке"
+    assert my_func.__name__ == "my_func"
+    assert my_func.__doc__ == "Моя документация."
 
-        try:
-            with open("test_log.txt", "r", encoding="utf-8") as f:
-                content: str = f.read()
-            assert "error_func error: TypeError" in content
-            assert "Inputs: (), {}" in content
-        except (IOError, OSError) as e:
-            pytest.fail(f"Не удалось прочитать файл логов: {e}")
 
-    def test_function_arguments_logging(self, capsys: pytest.CaptureFixture[str]) -> None:
-        """Тест логирования аргументов функции.
+def test_logs_separation(isolate_loggers: Dict[str, str]) -> None:
+    """Тест, что успехи и ошибки пишутся в разные файлы."""
 
-        Проверяет, что:
-        - Декоратор корректно обрабатывает функции с позиционными и именованными аргументами.
-        - При успешном выполнении в консоль выводится сообщение с именем функции и статусом "ok".
-        - Логирование не искажает возвращаемое значение функции.
+    @log()
+    def ok_func() -> int:
+        return 1
 
-        Args:
-            capsys: Фикстура pytest для захвата вывода в stdout/stderr.
-                Предоставляется фреймворком автоматически.
+    @log()
+    def err_func() -> None:
+        raise RuntimeError("err")
 
-        Test steps:
-        1. Вызываем декорированную функцию с разными типами аргументов.
-        2. Захватываем вывод консоли.
-        3. Проверяем, что в выводе присутствует сообщение об успешном выполнении.
-        """
-        func_with_args(10, 20, c="custom")
-        captured = capsys.readouterr()
-        # Проверяем, что в захваченном выводе есть сообщение об успехе
-        assert "func_with_args ok" in captured.out
+    ok_func()
+    with pytest.raises(RuntimeError):
+        err_func()
 
-    @pytest.fixture(autouse=True)
-    def cleanup_files(self) -> Iterator[None]:
-        """Очистка тестовых файлов после тестов.
+    success_content: str = open(isolate_loggers["success_log"], encoding="utf-8").read()
+    error_content: str = open(isolate_loggers["errors_log"], encoding="utf-8").read()
 
-        Автоматически выполняемая фикстура, которая гарантирует удаление временного
-        файла логов после завершения всех тестов в классе.
+    assert "ok_func ok" in success_content
+    assert "err_func error" not in success_content
 
-        Эта фикстура:
-        - Выполняется после каждого теста (благодаря autouse=True).
-        - Удаляет файл test_log.txt, если он существует.
-        - Игнорирует ошибки доступа, которые могут возникнуть, если файл
-          всё ещё заблокирован другим процессом.
-
-        Raises:
-            PermissionError: Игнорируется — возникает, если файл занят другим процессом.
-            OSError: Игнорируется — общие ошибки файловой системы.
-
-        Note:
-            Использование yield позволяет выполнить код до и после тестов.
-            В данном случае код после yield выполняется после каждого теста.
-        """
-        yield
-        try:
-            if os.path.exists("test_log.txt"):
-                os.remove("test_log.txt")
-        except PermissionError, OSError:
-            # Игнорируем ошибки доступа — файл может быть занят другим процессом
-            # или находиться в состоянии, не позволяющем удаление
-            pass
+    assert "err_func error: RuntimeError" in error_content
+    assert "ok_func ok" not in error_content
