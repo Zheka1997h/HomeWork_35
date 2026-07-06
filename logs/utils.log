@@ -420,3 +420,31 @@
 2026-07-06 16:07:23 - utils - ERROR - Ошибка формата JSON в файле invalid.json: Expecting value: line 1 column 1 (char 0)
 2026-07-06 16:07:23 - utils - INFO - Начало чтения файла: restricted.json
 2026-07-06 16:07:23 - utils - ERROR - Непредвиденная ошибка при работе с restricted.json: 
+2026-07-06 21:25:08 - utils - INFO - Начало чтения файла: data/operations.json
+2026-07-06 21:25:08 - utils - INFO - Файл успешно прочитан. Найдено записей: 1
+2026-07-06 21:25:08 - utils - INFO - Начало чтения файла: nonexistent.json
+2026-07-06 21:25:08 - utils - ERROR - Файл не найден: nonexistent.json. 
+2026-07-06 21:25:08 - utils - INFO - Начало чтения файла: empty.json
+2026-07-06 21:25:08 - utils - ERROR - Ошибка формата JSON в файле empty.json: Expecting value: line 1 column 1 (char 0)
+2026-07-06 21:25:09 - utils - INFO - Начало чтения файла: whitespace.json
+2026-07-06 21:25:09 - utils - ERROR - Ошибка формата JSON в файле whitespace.json: Expecting value: line 2 column 3 (char 6)
+2026-07-06 21:25:09 - utils - INFO - Начало чтения файла: dict.json
+2026-07-06 21:25:09 - utils - WARNING - Формат данных не соответствует списку.
+2026-07-06 21:25:09 - utils - INFO - Начало чтения файла: invalid.json
+2026-07-06 21:25:09 - utils - ERROR - Ошибка формата JSON в файле invalid.json: Expecting value: line 1 column 1 (char 0)
+2026-07-06 21:25:09 - utils - INFO - Начало чтения файла: restricted.json
+2026-07-06 21:25:09 - utils - ERROR - Непредвиденная ошибка при работе с restricted.json: 
+2026-07-06 21:53:48 - utils - INFO - Начало чтения файла: data/operations.json
+2026-07-06 21:53:48 - utils - INFO - Файл успешно прочитан. Найдено записей: 1
+2026-07-06 21:53:48 - utils - INFO - Начало чтения файла: nonexistent.json
+2026-07-06 21:53:48 - utils - ERROR - Файл не найден: nonexistent.json. 
+2026-07-06 21:53:48 - utils - INFO - Начало чтения файла: empty.json
+2026-07-06 21:53:48 - utils - ERROR - Ошибка формата JSON в файле empty.json: Expecting value: line 1 column 1 (char 0)
+2026-07-06 21:53:48 - utils - INFO - Начало чтения файла: whitespace.json
+2026-07-06 21:53:48 - utils - ERROR - Ошибка формата JSON в файле whitespace.json: Expecting value: line 2 column 3 (char 6)
+2026-07-06 21:53:48 - utils - INFO - Начало чтения файла: dict.json
+2026-07-06 21:53:48 - utils - WARNING - Формат данных не соответствует списку.
+2026-07-06 21:53:48 - utils - INFO - Начало чтения файла: invalid.json
+2026-07-06 21:53:48 - utils - ERROR - Ошибка формата JSON в файле invalid.json: Expecting value: line 1 column 1 (char 0)
+2026-07-06 21:53:48 - utils - INFO - Начало чтения файла: restricted.json
+2026-07-06 21:53:48 - utils - ERROR - Непредвиденная ошибка при работе с restricted.json: 

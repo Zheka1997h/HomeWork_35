@@ -323,32 +323,103 @@ class TestAskStatus:
 # ==================== ТЕСТЫ ЗАГРУЗКИ ДАННЫХ ====================
 
 
+# ==================== ТЕСТЫ ЗАГРУЗКИ ДАННЫХ ====================
+
+
 class TestLoadData:
     """Тесты функции load_data."""
 
+    # 🆕 Ожидаемая нормализованная структура для пустого словаря
+    EXPECTED_NORMALIZED_EMPTY = {
+        "id": None,
+        "date": "",
+        "description": "",
+        "from": "",
+        "to": "",
+        "state": "",
+        "operationAmount": {
+            "amount": "0",
+            "currency": {
+                "name": "RUB",
+                "code": "RUB",
+            },
+        },
+    }
+
     @patch("src.main.read_json_file")
     def test_load_data_json(self, mock_read: MagicMock) -> None:
-        """Проверяет загрузку JSON."""
+        """Проверяет загрузку JSON с нормализацией."""
         mock_read.return_value = [{"id": 1}]
         result = load_data("1")
-        assert result == [{"id": 1}]
+        # 🆕 Ожидаем нормализованную структуру
+        expected = {**self.EXPECTED_NORMALIZED_EMPTY, "id": 1}
+        assert result == [expected]
         mock_read.assert_called_once()
 
     @patch("src.main.transactions")
     def test_load_data_csv(self, mock_read: MagicMock) -> None:
-        """Проверяет загрузку CSV."""
+        """Проверяет загрузку CSV с нормализацией."""
         mock_read.return_value = [{"id": 2}]
         result = load_data("2")
-        assert result == [{"id": 2}]
+        expected = {**self.EXPECTED_NORMALIZED_EMPTY, "id": 2}
+        assert result == [expected]
         mock_read.assert_called_once()
 
     @patch("src.main.transactions_ecxel")
     def test_load_data_xlsx(self, mock_read: MagicMock) -> None:
-        """Проверяет загрузку XLSX."""
+        """Проверяет загрузку XLSX с нормализацией."""
         mock_read.return_value = [{"id": 3}]
         result = load_data("3")
-        assert result == [{"id": 3}]
+        expected = {**self.EXPECTED_NORMALIZED_EMPTY, "id": 3}
+        assert result == [expected]
         mock_read.assert_called_once()
+
+    # 🆕 Тест для покрытия строк 374-376 (amount = None)
+    @patch("src.main.read_json_file")
+    def test_load_data_json_with_amount_none(self, mock_read: MagicMock) -> None:
+        """🆕 Покрывает ветку amount_str = '0' при amount=None."""
+        mock_read.return_value = [{"id": 1, "amount": None}]
+        result = load_data("1")
+        assert result[0]["operationAmount"]["amount"] == "0"
+
+    # 🆕 Тест для покрытия строк 374-376 (amount = NaN)
+    @patch("src.main.read_json_file")
+    def test_load_data_json_with_amount_nan(self, mock_read: MagicMock) -> None:
+        """🆕 Покрывает ветку amount_str = '0' при amount=NaN."""
+        import math
+        mock_read.return_value = [{"id": 1, "amount": float("nan")}]
+        result = load_data("1")
+        assert result[0]["operationAmount"]["amount"] == "0"
+
+    # 🆕 Тест для покрытия строки 385 (currency из транзакции)
+    @patch("src.main.read_json_file")
+    def test_load_data_json_with_currency(self, mock_read: MagicMock) -> None:
+        """🆕 Покрывает ветку currency_code из плоской структуры."""
+        mock_read.return_value = [{"id": 1, "amount": 100.5, "currency": "USD"}]
+        result = load_data("1")
+        assert result[0]["operationAmount"]["amount"] == "100.5"
+        assert result[0]["operationAmount"]["currency"]["code"] == "USD"
+
+    # 🆕 Тест для JSON-структуры (с operationAmount) — проверка ветки "уже JSON"
+    @patch("src.main.read_json_file")
+    def test_load_data_json_already_normalized(self, mock_read: MagicMock) -> None:
+        """🆕 Покрывает ветку 'operationAmount in transaction'."""
+        json_data = [
+            {
+                "id": 1,
+                "date": "2019-07-03T18:35:29.512364",
+                "operationAmount": {
+                    "amount": "130.00",
+                    "currency": {"name": "USD", "code": "USD"},
+                },
+                "from": "Visa Platinum 7492650272063783",
+            }
+        ]
+        mock_read.return_value = json_data
+        result = load_data("1")
+        # Структура должна остаться той же (с очисткой NaN)
+        assert result[0]["operationAmount"]["amount"] == "130.00"
+        assert result[0]["from"] == "Visa Platinum 7492650272063783"
 
 
 class TestGetSourceName:

@@ -75,7 +75,7 @@ def mask_from_to_field(field_value: str) -> str:
     Returns:
         Замаскированная строка.
     """
-    if not field_value:
+    if not field_value or not isinstance(field_value, str):
         return ""
 
     # Для счёта — используем get_mask_account из masks
@@ -340,29 +340,92 @@ def ask_status() -> str:
 
 # ==================== 🆕 ЗАГРУЗКА ДАННЫХ БЕЗ ВВОДА ПУТИ ====================
 
+import math
+from datetime import datetime
+
+
+def _safe_str(value: Any) -> str:
+    """Безопасно преобразует значение в строку.
+
+    Обрабатывает None, NaN (float) и datetime.
+    Пустые/битые значения превращает в пустую строку.
+    """
+    if value is None:
+        return ""
+    # Проверка на NaN (NaN != NaN)
+    if isinstance(value, float) and math.isnan(value):
+        return ""
+    # Дату из pandas превращаем в ISO-строку
+    if isinstance(value, datetime):
+        return value.isoformat()
+    return str(value)
+
+@log()
+def normalize_transaction(transaction: dict) -> dict:
+    """Приводит транзакцию из CSV/XLSX к структуре JSON.
+
+    Если данные уже в JSON-формате (есть ключ 'operationAmount') —
+    возвращает как есть. Иначе собирает плоские поля в нужную структуру
+    и чистит NaN/None.
+    """
+    # Если структура уже JSON-совместима — ничего не делаем
+    if "operationAmount" in transaction:
+        # Но всё равно почистим NaN в текстовых полях
+        for key in ("from", "to", "description", "date"):
+            if key in transaction:
+                transaction[key] = _safe_str(transaction[key])
+        return transaction
+
+    # Плоская структура CSV/XLSX → собираем JSON-подобный словарь
+    amount_raw = transaction.get("amount")
+    # Если amount = NaN или None → "0"
+    if amount_raw is None or (isinstance(amount_raw, float) and math.isnan(amount_raw)):
+        amount_str = "0"
+    else:
+        amount_str = str(amount_raw)
+
+    currency_code = _safe_str(transaction.get("currency", "RUB")).upper() or "RUB"
+
+    return {
+        "id": transaction.get("id"),
+        "date": _safe_str(transaction.get("date", "")),
+        "description": _safe_str(transaction.get("description", "")),
+        "from": _safe_str(transaction.get("from", "")),
+        "to": _safe_str(transaction.get("to", "")),
+        "state": _safe_str(transaction.get("state", "")),
+        "operationAmount": {
+            "amount": amount_str,
+            "currency": {
+                "name": currency_code,
+                "code": currency_code,
+            },
+        },
+    }
+
+@log()
+def normalize_transactions(data: List[dict]) -> List[dict]:
+    """Применяет normalize_transaction ко всему списку."""
+    return [normalize_transaction(t) for t in data if isinstance(t, dict)]
+
 
 @log()
 def load_data(choice: str) -> List[dict]:
-    """Загружает данные из захардкоженного файла.
-
-    🆕 Путь к файлу определяется автоматически по выбору пользователя.
-    Не требует ввода пути вручную.
-
-    Args:
-        choice: Выбор пользователя ('1', '2' или '3').
-
-    Returns:
-        Список словарей с транзакциями.
-    """
+    """Загружает данные из захардкоженного файла и нормализует их."""
     if choice == "1":
         print(f"📂 Загрузка данных из JSON: {JSON_FILE_PATH}")
-        result: List[Dict[str, Any]] = read_json_file(JSON_FILE_PATH)
-        return result
+        data = read_json_file(JSON_FILE_PATH)
+        # JSON уже в нужной структуре, но NaN-чистка не помешает
+        return normalize_transactions(data)
+
     if choice == "2":
         print(f"📂 Загрузка данных из CSV: {CSV_FILE_PATH}")
-        return cast(list[dict[str, Any]], transactions(CSV_FILE_PATH))
+        raw = transactions(CSV_FILE_PATH)
+        return normalize_transactions(cast(list[dict[str, Any]], raw))
+
     print(f"📂 Загрузка данных из XLSX: {XLSX_FILE_PATH}")
-    return cast(list[dict[str, Any]], transactions_ecxel(XLSX_FILE_PATH))
+    raw = transactions_ecxel(XLSX_FILE_PATH)
+    return normalize_transactions(cast(list[dict[str, Any]], raw))
+
 
 
 @log()
