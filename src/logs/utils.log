@@ -12,3 +12,21 @@
 2026-07-05 15:53:56 - utils - INFO - Файл успешно прочитан. Найдено записей: 101
 2026-07-05 16:21:07 - utils - INFO - Начало чтения файла: C:\Users\Zheka1998\Desktop\TaskОne_2\data\operations.json
 2026-07-05 16:21:07 - utils - INFO - Файл успешно прочитан. Найдено записей: 101
+2026-07-05 18:48:14 - utils - INFO - Начало чтения файла: C:\Users\Zheka1998\Desktop\TaskОne_2\data\operations.json
+2026-07-05 18:48:14 - utils - INFO - Файл успешно прочитан. Найдено записей: 101
+2026-07-05 18:49:54 - utils - INFO - Начало чтения файла: C:\Users\Zheka1998\Desktop\TaskОne_2\data\operations.json
+2026-07-05 18:49:54 - utils - INFO - Файл успешно прочитан. Найдено записей: 101
+2026-07-06 10:10:24 - utils - INFO - Начало чтения файла: C:\Users\Zheka1998\Desktop\TaskОne_2\data\operations.json
+2026-07-06 10:10:24 - utils - INFO - Файл успешно прочитан. Найдено записей: 101
+2026-07-06 13:59:07 - utils - INFO - Начало чтения файла: data/operations.json
+2026-07-06 13:59:07 - utils - ERROR - Файл не найден: data/operations.json. [Errno 2] No such file or directory: 'data/operations.json'
+2026-07-06 14:01:21 - utils - INFO - Начало чтения файла: C:\Users\Zheka1998\Desktop\TaskOne_2\data/operations.json
+2026-07-06 14:01:21 - utils - ERROR - Файл не найден: C:\Users\Zheka1998\Desktop\TaskOne_2\data/operations.json. [Errno 2] No such file or directory: 'C:\\Users\\Zheka1998\\Desktop\\TaskOne_2\\data/operations.json'
+2026-07-06 14:01:54 - utils - INFO - Начало чтения файла: C:/Users/Zheka1998/Desktop/TaskOne_2/data/operations.json
+2026-07-06 14:01:54 - utils - ERROR - Файл не найден: C:/Users/Zheka1998/Desktop/TaskOne_2/data/operations.json. [Errno 2] No such file or directory: 'C:/Users/Zheka1998/Desktop/TaskOne_2/data/operations.json'
+2026-07-06 14:02:10 - utils - INFO - Начало чтения файла: C:/Users/Zheka1998/TaskOne_2/data/operations.json
+2026-07-06 14:02:10 - utils - ERROR - Файл не найден: C:/Users/Zheka1998/TaskOne_2/data/operations.json. [Errno 2] No such file or directory: 'C:/Users/Zheka1998/TaskOne_2/data/operations.json'
+2026-07-06 14:06:37 - utils - INFO - Начало чтения файла: C:\Users\Zheka1998\Desktop\TaskОne_2\data\operations.json
+2026-07-06 14:06:37 - utils - INFO - Файл успешно прочитан. Найдено записей: 101
+2026-07-06 14:08:58 - utils - INFO - Начало чтения файла: C:\Users\Zheka1998\Desktop\TaskОne_2\data\operations.json
+2026-07-06 14:08:58 - utils - INFO - Файл успешно прочитан. Найдено записей: 101
