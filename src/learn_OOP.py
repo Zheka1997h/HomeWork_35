@@ -1,29 +1,31 @@
 import json
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Dict, Any, List
 
 
 class Product:
+    """Класс, представляющий товар."""
 
-    name:str #Имя продукта (поле)
-    description:str #Описание продукта (поле)
-    price: float#Цена продукта (поле)
-    quantity: int # Количество продукта (поле)
+    # === Атрибуты класса ===
+    product_count: int = 0  # Общее количество созданных товаров
 
-    """Свойства(атрибуты) класса Product"""
-    def __init__(self, name: str, description: str, price: float, quantity:int):
+    def __init__(self, name: str, description: str, price: float, quantity: int):
         self.name = name
         self.description = description
         self.price = price
-        self. quantity = quantity
+        self.quantity = quantity
 
-    """Вывод заданных свойств класса Product"""
+        # Автоматически увеличиваем счётчик при создании объекта
+        Product.product_count += 1
+
     def __str__(self):
-        return f"Продукт: {self.name} \nОписание: {self.description}\nЦена: {self.price}\nКоличество: {self.quantity}"
-    pass
+        return (f"Продукт: {self.name}\n"
+                f"Описание: {self.description}\n"
+                f"Цена: {self.price}\n"
+                f"Количество: {self.quantity}")
 
-    def to_dict(self)-> Dict[str, Any]:
-        """Преобразование в словарь для JSON"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Преобразование в словарь для JSON."""
         return {
             "name": self.name,
             "description": self.description,
@@ -32,7 +34,7 @@ class Product:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any])-> 'Product':
+    def from_dict(cls, data: Dict[str, Any]) -> 'Product':
         """Создание объекта Product из словаря."""
         return cls(
             name=data["name"],
@@ -42,39 +44,38 @@ class Product:
         )
 
 
-
-
 class Category:
+    """Класс, представляющий категорию товаров."""
 
-    name: str  # Имя продукта (поле)
-    description: str  # Описание продукта (поле)
-    products: str
+    # === Атрибуты класса ===
+    category_count: int = 0  # Общее количество созданных категорий
 
-    def __init__(self, name: str, description:str):
+    def __init__(self, name: str, description: str):
         self.name = name
         self.description = description
-        self.products: list[Product] = []
+        self.products: List[Product] = []
+
+        # Автоматически увеличиваем счётчик при создании объекта
+        Category.category_count += 1
 
     def add_product(self, product: Product):
-        """Добавляем категорию"""
+        """Добавить товар в категорию."""
         self.products.append(product)
 
-    def get_total_products(self)-> int:
-        """Возвращает количество товаров"""
+    def get_total_products(self) -> int:
+        """Возвращает количество товаров в данной категории."""
         return len(self.products)
 
-
     def __str__(self):
-        return f"Категория:{self.name} | Товаров: {self.get_total_products()}"
+        return f"Категория: {self.name} | Товаров: {self.get_total_products()}"
 
-    def to_dict(self)-> Dict[str, Any]:
-        """Преобразование в словарь для JSON"""
+    def to_dict(self) -> Dict[str, Any]:
+        """Преобразование в словарь для JSON."""
         return {
             "name": self.name,
             "description": self.description,
             "products": [p.to_dict() for p in self.products]
         }
-
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Category':
@@ -83,64 +84,55 @@ class Category:
             name=data["name"],
             description=data["description"]
         )
-        # Создаем товары из JSON
-
         for product_data in data.get("products", []):
             product = Product.from_dict(product_data)
             category.add_product(product)
-        return  category
-
-
-
-
-    pass
+        return category
 
 
 class Read_Json_file:
-    """Класс для чтения JSON файла."""
+    """Класс для чтения JSON файла и управления данными."""
 
-    # ⚠️ ВАЖНО: добавьте этот метод!
     def __init__(self):
-        self.categories: list[Category] = []  # ← вот это создаёт атрибут
+        self.categories: List[Category] = []
 
     def add_category(self, category: Category):
         """Добавить категорию."""
         self.categories.append(category)
 
-    def get_all_categories(self) -> list[Category]:
+    def get_all_categories(self) -> List[Category]:
         """Получить все категории."""
         return self.categories
 
     def get_total_products(self) -> int:
-        """Общее количество товаров."""
+        """Общее количество товаров во всех категориях."""
         return sum(cat.get_total_products() for cat in self.categories)
 
     @classmethod
     def load_from_json(cls, file_path: str) -> 'Read_Json_file':
-        """Читает JSON файл."""
+        """Читает JSON файл и создаёт объект Read_Json_file."""
         path = Path(file_path)
 
         if not path.exists():
             print(f"❌ Файл не найден: {file_path}")
-            return cls()  # ✅ Теперь работает, т.к. __init__ есть
+            return cls()
 
         try:
             with open(file_path, 'r', encoding='utf-8') as file:
                 data = json.load(file)
 
             manager = cls()
+
             if isinstance(data, dict):
-                # Если это словарь — ищем ключ "categories"
                 categories_data = data.get("categories", [])
             elif isinstance(data, list):
-                # Если это список — используем его напрямую
                 categories_data = data
             else:
                 print(f"❌ Неизвестный формат JSON: {type(data)}")
                 return cls()
 
-            for categories_data in categories_data:
-                category = Category.from_dict(categories_data)
+            for category_data in categories_data:
+                category = Category.from_dict(category_data)
                 manager.add_category(category)
 
             print(f"✅ Загружено {len(manager.categories)} категорий")
@@ -158,15 +150,24 @@ class Read_Json_file:
         return f"Менеджер: {len(self.categories)} категорий, {self.get_total_products()} товаров"
 
 
+if __name__ == "__main__":
+    # Сбрасываем счётчики перед запуском
+    Product.product_count = 0
+    Category.category_count = 0
 
-manager = Read_Json_file.load_from_json(r"C:\Users\Zheka1998\Desktop\TaskОne_2\data\products.json")
+    manager = Read_Json_file.load_from_json(
+        r"C:\Users\Zheka1998\Desktop\TaskОne_2\data\products.json"
+    )
 
-print(manager)
-print()
-
-
-for category in manager.get_all_categories():
-    print(category)
-    for product in category.products:
-        print(f" - {product.name}: {product.price} р (в наличии: {product.quantity}")
+    print(manager)
     print()
+
+    for category in manager.get_all_categories():
+        print(category)
+        for product in category.products:
+            print(f"  - {product.name}: {product.price} р (в наличии: {product.quantity})")
+        print()
+
+    # Вывод атрибутов класса
+    print(f"Всего создано категорий: {Category.category_count}")
+    print(f"Всего создано товаров: {Product.product_count}")
