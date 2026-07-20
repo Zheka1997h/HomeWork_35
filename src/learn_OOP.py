@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 
 class Product:
@@ -19,29 +19,21 @@ class Product:
         Product.product_count += 1
 
     def __str__(self):
-        return (f"Продукт: {self.name}\n"
-                f"Описание: {self.description}\n"
-                f"Цена: {self.price}\n"
-                f"Количество: {self.quantity}")
+        return (
+            f"Продукт: {self.name}\n"
+            f"Описание: {self.description}\n"
+            f"Цена: {self.price}\n"
+            f"Количество: {self.quantity}"
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         """Преобразование в словарь для JSON."""
-        return {
-            "name": self.name,
-            "description": self.description,
-            "price": self.price,
-            "quantity": self.quantity
-        }
+        return {"name": self.name, "description": self.description, "price": self.price, "quantity": self.quantity}
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Product':
+    def from_dict(cls, data: Dict[str, Any]) -> "Product":
         """Создание объекта Product из словаря."""
-        return cls(
-            name=data["name"],
-            description=data["description"],
-            price=data["price"],
-            quantity=data["quantity"]
-        )
+        return cls(name=data["name"], description=data["description"], price=data["price"], quantity=data["quantity"])
 
 
 class Category:
@@ -71,19 +63,12 @@ class Category:
 
     def to_dict(self) -> Dict[str, Any]:
         """Преобразование в словарь для JSON."""
-        return {
-            "name": self.name,
-            "description": self.description,
-            "products": [p.to_dict() for p in self.products]
-        }
+        return {"name": self.name, "description": self.description, "products": [p.to_dict() for p in self.products]}
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Category':
+    def from_dict(cls, data: Dict[str, Any]) -> "Category":
         """Создание объекта Category из словаря."""
-        category = cls(
-            name=data["name"],
-            description=data["description"]
-        )
+        category = cls(name=data["name"], description=data["description"])
         for product_data in data.get("products", []):
             product = Product.from_dict(product_data)
             category.add_product(product)
@@ -109,7 +94,7 @@ class Read_Json_file:
         return sum(cat.get_total_products() for cat in self.categories)
 
     @classmethod
-    def load_from_json(cls, file_path: str) -> 'Read_Json_file':
+    def load_from_json(cls, file_path: str) -> "Read_Json_file":
         """Читает JSON файл и создаёт объект Read_Json_file."""
         path = Path(file_path)
 
@@ -118,7 +103,7 @@ class Read_Json_file:
             return cls()
 
         try:
-            with open(file_path, 'r', encoding='utf-8') as file:
+            with open(file_path, "r", encoding="utf-8") as file:
                 data = json.load(file)
 
             manager = cls()
@@ -155,9 +140,7 @@ if __name__ == "__main__":
     Product.product_count = 0
     Category.category_count = 0
 
-    manager = Read_Json_file.load_from_json(
-        r"C:\Users\Zheka1998\Desktop\TaskОne_2\data\products.json"
-    )
+    manager = Read_Json_file.load_from_json(r"C:\Users\Zheka1998\Desktop\TaskОne_2\data\products.json")
 
     print(manager)
     print()
