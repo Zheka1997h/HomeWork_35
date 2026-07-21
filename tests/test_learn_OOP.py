@@ -8,8 +8,6 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# type: ignore[import-not-found] указывает mypy не ругаться на локальный импорт,
-# если пакет src не установлен в окружении mypy или не имеет stub-файлов.
 from src.learn_OOP import Category, Product, Read_Json_file  # type: ignore[import-not-found]
 
 
@@ -18,6 +16,7 @@ def reset_counters() -> Iterator[None]:
     """Сбрасывает счётчики классов перед каждым тестом."""
     Product.product_count = 0
     Category.category_count = 0
+    Category.product_count = 0  # <-- добавлено
     yield
 
 
@@ -57,7 +56,6 @@ class TestProduct:
         product = Product("Ноутбук", "Игровой", 129990.0, 8)
         result = product.to_dict()
         assert result == {"name": "Ноутбук", "description": "Игровой", "price": 129990.0, "quantity": 8}
-        # Исправлено: 129990.0 в словаре
         assert result["price"] == 129990.0
 
     def test_product_from_dict(self) -> None:
@@ -68,7 +66,7 @@ class TestProduct:
         assert product.quantity == 30
 
     def test_product_from_dict_increments_count(self) -> None:
-        """from_dict тоже увеличивает счётчик (вызывает __init__)."""
+        """from_dict тоже увеличивает счётчик Product.product_count (вызывает __init__)."""
         Product.from_dict({"name": "Т", "description": "О", "price": 1.0, "quantity": 1})
         assert Product.product_count == 1
 
@@ -93,6 +91,28 @@ class TestCategory:
 
         Category("К2", "О2")
         assert Category.category_count == 2
+
+    def test_product_count_increments_on_add(self) -> None:
+        """Атрибут класса Category.product_count увеличивается при add_product."""
+        assert Category.product_count == 0
+
+        cat = Category("Электроника", "Гаджеты")
+        cat.add_product(Product("Т1", "О", 10.0, 1))
+        assert Category.product_count == 1
+
+        cat.add_product(Product("Т2", "О", 20.0, 2))
+        assert Category.product_count == 2
+
+    def test_product_count_increments_across_categories(self) -> None:
+        """Category.product_count — общий счётчик по всем категориям."""
+        cat1 = Category("К1", "О1")
+        cat2 = Category("К2", "О2")
+
+        cat1.add_product(Product("Т1", "О", 10.0, 1))
+        cat2.add_product(Product("Т2", "О", 20.0, 2))
+        cat2.add_product(Product("Т3", "О", 30.0, 3))
+
+        assert Category.product_count == 3
 
     def test_add_product(self) -> None:
         category = Category("Электроника", "Гаджеты")
@@ -141,7 +161,7 @@ class TestCategory:
         assert category.get_total_products() == 0
 
     def test_category_from_dict_increments_counts(self) -> None:
-        """from_dict увеличивает и category_count, и product_count."""
+        """from_dict увеличивает category_count, product_count (у Category) и Product.product_count."""
         data = {
             "name": "К1",
             "description": "О",
@@ -153,6 +173,7 @@ class TestCategory:
         Category.from_dict(data)
 
         assert Category.category_count == 1
+        assert Category.product_count == 2  # <-- новый атрибут
         assert Product.product_count == 2
 
 
@@ -252,7 +273,7 @@ class TestReadJsonFile:
         assert manager.get_total_products() == 0
 
     def test_load_updates_class_counters(self, tmp_path: Path) -> None:
-        """Загрузка из JSON обновляет атрибуты класса."""
+        """Загрузка из JSON обновляет все атрибуты класса."""
         data = {
             "categories": [
                 {
@@ -276,6 +297,7 @@ class TestReadJsonFile:
         Read_Json_file.load_from_json(str(json_file))
 
         assert Category.category_count == 2
+        assert Category.product_count == 3  # <-- новый атрибут
         assert Product.product_count == 3
 
 
@@ -311,4 +333,5 @@ class TestIntegration:
         assert len(manager.get_all_categories()) == 2
         assert manager.get_total_products() == 3
         assert Category.category_count == 2
+        assert Category.product_count == 3  # <-- новый атрибут
         assert Product.product_count == 3

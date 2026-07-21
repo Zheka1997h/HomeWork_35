@@ -18,7 +18,7 @@ class Product:
         # Автоматически увеличиваем счётчик при создании объекта
         Product.product_count += 1
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"Продукт: {self.name}\n"
             f"Описание: {self.description}\n"
@@ -41,24 +41,27 @@ class Category:
 
     # === Атрибуты класса ===
     category_count: int = 0  # Общее количество созданных категорий
+    product_count: int = 0  # Общее количество товаров во всех категориях
 
     def __init__(self, name: str, description: str):
         self.name = name
         self.description = description
         self.products: List[Product] = []
 
-        # Автоматически увеличиваем счётчик при создании объекта
+        # Автоматически увеличиваем счётчик категорий при создании объекта
         Category.category_count += 1
 
-    def add_product(self, product: Product):
+    def add_product(self, product: Product) -> None:
         """Добавить товар в категорию."""
         self.products.append(product)
+        # Увеличиваем общий счётчик товаров во всех категориях
+        Category.product_count += 1
 
     def get_total_products(self) -> int:
         """Возвращает количество товаров в данной категории."""
         return len(self.products)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Категория: {self.name} | Товаров: {self.get_total_products()}"
 
     def to_dict(self) -> Dict[str, Any]:
@@ -71,17 +74,17 @@ class Category:
         category = cls(name=data["name"], description=data["description"])
         for product_data in data.get("products", []):
             product = Product.from_dict(product_data)
-            category.add_product(product)
+            category.add_product(product)  # здесь же увеличится Category.product_count
         return category
 
 
 class Read_Json_file:
     """Класс для чтения JSON файла и управления данными."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.categories: List[Category] = []
 
-    def add_category(self, category: Category):
+    def add_category(self, category: Category) -> None:
         """Добавить категорию."""
         self.categories.append(category)
 
@@ -131,7 +134,7 @@ class Read_Json_file:
             print(f"❌ Ошибка: {e}")
             return cls()
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Менеджер: {len(self.categories)} категорий, {self.get_total_products()} товаров"
 
 
@@ -139,6 +142,7 @@ if __name__ == "__main__":
     # Сбрасываем счётчики перед запуском
     Product.product_count = 0
     Category.category_count = 0
+    Category.product_count = 0
 
     manager = Read_Json_file.load_from_json(r"C:\Users\Zheka1998\Desktop\TaskОne_2\data\products.json")
 
@@ -153,4 +157,5 @@ if __name__ == "__main__":
 
     # Вывод атрибутов класса
     print(f"Всего создано категорий: {Category.category_count}")
-    print(f"Всего создано товаров: {Product.product_count}")
+    print(f"Всего создано товаров (Product.product_count): {Product.product_count}")
+    print(f"Всего товаров во всех категориях (Category.product_count): {Category.product_count}")
