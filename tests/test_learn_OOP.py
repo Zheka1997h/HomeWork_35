@@ -16,7 +16,8 @@ def reset_counters() -> Iterator[None]:
     """Сбрасывает счётчики классов перед каждым тестом."""
     Product.product_count = 0
     Category.category_count = 0
-    Category.product_count = 0  # <-- добавлено
+    # ИСПРАВЛЕНО: сброс нового счётчика товаров во всех категориях
+    Category.product_count = 0
     yield
 
 
@@ -33,7 +34,7 @@ class TestProduct:
         assert product.quantity == 15
 
     def test_product_count_increments(self) -> None:
-        """Атрибут класса: счётчик товаров увеличивается."""
+        """Атрибут класса: счётчик товаров увеличивается при инициализации."""
         assert Product.product_count == 0
 
         Product("Т1", "О", 10.0, 1)
@@ -83,7 +84,7 @@ class TestCategory:
         assert category.products == []
 
     def test_category_count_increments(self) -> None:
-        """Атрибут класса: счётчик категорий увеличивается."""
+        """Атрибут класса: счётчик категорий увеличивается при инициализации."""
         assert Category.category_count == 0
 
         Category("К1", "О1")
@@ -92,19 +93,22 @@ class TestCategory:
         Category("К2", "О2")
         assert Category.category_count == 2
 
+    # ИСПРАВЛЕНО: новый тест — проверяет реализацию логики подсчёта Category.product_count
     def test_product_count_increments_on_add(self) -> None:
         """Атрибут класса Category.product_count увеличивается при add_product."""
         assert Category.product_count == 0
 
         cat = Category("Электроника", "Гаджеты")
         cat.add_product(Product("Т1", "О", 10.0, 1))
+        # ИСПРАВЛЕНО: проверка, что product_count реально изменяется
         assert Category.product_count == 1
 
         cat.add_product(Product("Т2", "О", 20.0, 2))
         assert Category.product_count == 2
 
+    # ИСПРАВЛЕНО: новый тест — проверяет, что счётчик общий для всех категорий
     def test_product_count_increments_across_categories(self) -> None:
-        """Category.product_count — общий счётчик по всем категориям."""
+        """Category.product_count — общий счётчик товаров по всем категориям."""
         cat1 = Category("К1", "О1")
         cat2 = Category("К2", "О2")
 
@@ -112,6 +116,7 @@ class TestCategory:
         cat2.add_product(Product("Т2", "О", 20.0, 2))
         cat2.add_product(Product("Т3", "О", 30.0, 3))
 
+        # ИСПРАВЛЕНО: проверка, что product_count суммируется по всем категориям
         assert Category.product_count == 3
 
     def test_add_product(self) -> None:
@@ -161,7 +166,7 @@ class TestCategory:
         assert category.get_total_products() == 0
 
     def test_category_from_dict_increments_counts(self) -> None:
-        """from_dict увеличивает category_count, product_count (у Category) и Product.product_count."""
+        """from_dict увеличивает category_count, product_count и Product.product_count."""
         data = {
             "name": "К1",
             "description": "О",
@@ -173,7 +178,8 @@ class TestCategory:
         Category.from_dict(data)
 
         assert Category.category_count == 1
-        assert Category.product_count == 2  # <-- новый атрибут
+        # ИСПРАВЛЕНО: проверка, что Category.product_count реально изменился
+        assert Category.product_count == 2
         assert Product.product_count == 2
 
 
@@ -297,7 +303,8 @@ class TestReadJsonFile:
         Read_Json_file.load_from_json(str(json_file))
 
         assert Category.category_count == 2
-        assert Category.product_count == 3  # <-- новый атрибут
+        # ИСПРАВЛЕНО: проверка, что Category.product_count обновился при загрузке JSON
+        assert Category.product_count == 3
         assert Product.product_count == 3
 
 
@@ -333,5 +340,6 @@ class TestIntegration:
         assert len(manager.get_all_categories()) == 2
         assert manager.get_total_products() == 3
         assert Category.category_count == 2
-        assert Category.product_count == 3  # <-- новый атрибут
+        # ИСПРАВЛЕНО: проверка нового атрибута в интеграционном тесте
+        assert Category.product_count == 3
         assert Product.product_count == 3
