@@ -14,8 +14,6 @@ class Product:
         self.description = description
         self.price = price
         self.quantity = quantity
-
-        # ИСПРАВЛЕНО: автоматически увеличиваем счётчик товаров при инициализации объекта
         Product.product_count += 1
 
     def __str__(self) -> str:
@@ -28,36 +26,44 @@ class Product:
 
     def to_dict(self) -> Dict[str, Any]:
         """Преобразование в словарь для JSON."""
-        return {"name": self.name, "description": self.description, "price": self.price, "quantity": self.quantity}
+        return {
+            "name": self.name,
+            "description": self.description,
+            "price": self.price,
+            "quantity": self.quantity,
+        }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Product":
         """Создание объекта Product из словаря."""
-        return cls(name=data["name"], description=data["description"], price=data["price"], quantity=data["quantity"])
+        return cls(
+            name=data["name"],
+            description=data["description"],
+            price=data["price"],
+            quantity=data["quantity"],
+        )
 
 
 class Category:
     """Класс, представляющий категорию товаров."""
 
     # === Атрибуты класса ===
-    category_count: int = 0  # Общее количество созданных категорий
-    # ИСПРАВЛЕНО: реализована логика подсчёта общего количества товаров во всех категориях
-    product_count: int = 0
+    category_count: int = 0   # Общее количество созданных категорий
+    product_count: int = 0    # Общее количество товаров во ВСЕХ категориях
 
     def __init__(self, name: str, description: str):
         self.name = name
         self.description = description
         self.products: List[Product] = []
-
-        # ИСПРАВЛЕНО: автоматически увеличиваем счётчик категорий при инициализации объекта
         Category.category_count += 1
 
     def add_product(self, product: Product) -> None:
-        """Добавить товар в категорию."""
+        """Добавить товар в категорию.
+
+        При каждом вызове увеличивает общий счётчик товаров во всех категориях.
+        """
         self.products.append(product)
-        # ИСПРАВЛЕНО: реализована логика подсчёта — увеличиваем общий счётчик товаров
-        # во всех категориях при каждом добавлении товара
-        Category.product_count += 1
+        Category.product_count += 1   # ← РЕАЛИЗАЦИЯ ЛОГИКИ ОБНОВЛЕНИЯ СЧЁТЧИКА
 
     def get_total_products(self) -> int:
         """Возвращает количество товаров в данной категории."""
@@ -68,7 +74,11 @@ class Category:
 
     def to_dict(self) -> Dict[str, Any]:
         """Преобразование в словарь для JSON."""
-        return {"name": self.name, "description": self.description, "products": [p.to_dict() for p in self.products]}
+        return {
+            "name": self.name,
+            "description": self.description,
+            "products": [p.to_dict() for p in self.products],
+        }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Category":
@@ -76,7 +86,6 @@ class Category:
         category = cls(name=data["name"], description=data["description"])
         for product_data in data.get("products", []):
             product = Product.from_dict(product_data)
-            # ИСПРАВЛЕНО: add_product внутри увеличивает Category.product_count
             category.add_product(product)
         return category
 
@@ -123,7 +132,6 @@ class Read_Json_file:
                 return cls()
 
             for category_data in categories_data:
-                # ИСПРАВЛЕНО: Category.from_dict внутри увеличивает Category.product_count
                 category = Category.from_dict(category_data)
                 manager.add_category(category)
 
@@ -146,10 +154,11 @@ if __name__ == "__main__":
     # Сбрасываем счётчики перед запуском
     Product.product_count = 0
     Category.category_count = 0
-    # ИСПРАВЛЕНО: сброс нового счётчика товаров во всех категориях
     Category.product_count = 0
 
-    manager = Read_Json_file.load_from_json(r"C:\Users\Zheka1998\Desktop\TaskОne_2\data\products.json")
+    manager = Read_Json_file.load_from_json(
+        r"C:\Users\Zheka1998\Desktop\TaskОne_2\data\products.json"
+    )
 
     print(manager)
     print()
@@ -162,6 +171,5 @@ if __name__ == "__main__":
 
     # Вывод атрибутов класса
     print(f"Всего создано категорий: {Category.category_count}")
-    print(f"Всего создано товаров (Product.product_count): {Product.product_count}")
-    # ИСПРАВЛЕНО: вывод нового атрибута класса Category
-    print(f"Всего товаров во всех категориях (Category.product_count): {Category.product_count}")
+    print(f"Всего создано товаров: {Product.product_count}")
+    print(f"Всего товаров во всех категориях: {Category.product_count}")
