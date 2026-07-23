@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 
 class Product:
@@ -48,22 +48,23 @@ class Category:
     """Класс, представляющий категорию товаров."""
 
     # === Атрибуты класса ===
-    category_count: int = 0   # Общее количество созданных категорий
-    product_count: int = 0    # Общее количество товаров во ВСЕХ категориях
+    category_count: int = 0  # Общее количество созданных категорий
+    product_count: int = 0  # Общее количество товаров во ВСЕХ категориях
 
-    def __init__(self, name: str, description: str):
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        products: Optional[List[Product]] = None,
+    ):
         self.name = name
         self.description = description
-        self.products: List[Product] = []
+        # Сохраняем переданный список товаров (или пустой, если ничего не передано)
+        self.products: List[Product] = products if products is not None else []
+
+        # Обновляем счётчики класса
         Category.category_count += 1
-
-    def add_product(self, product: Product) -> None:
-        """Добавить товар в категорию.
-
-        При каждом вызове увеличивает общий счётчик товаров во всех категориях.
-        """
-        self.products.append(product)
-        Category.product_count += 1   # ← РЕАЛИЗАЦИЯ ЛОГИКИ ОБНОВЛЕНИЯ СЧЁТЧИКА
+        Category.product_count += len(self.products)
 
     def get_total_products(self) -> int:
         """Возвращает количество товаров в данной категории."""
@@ -82,12 +83,17 @@ class Category:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Category":
-        """Создание объекта Category из словаря."""
-        category = cls(name=data["name"], description=data["description"])
-        for product_data in data.get("products", []):
-            product = Product.from_dict(product_data)
-            category.add_product(product)
-        return category
+        """Создание объекта Category из словаря.
+
+        Товары формируются в список и передаются в конструктор,
+        где и происходит подсчёт счётчиков класса.
+        """
+        products = [Product.from_dict(p) for p in data.get("products", [])]
+        return cls(
+            name=data["name"],
+            description=data["description"],
+            products=products,
+        )
 
 
 class Read_Json_file:
@@ -156,9 +162,7 @@ if __name__ == "__main__":
     Category.category_count = 0
     Category.product_count = 0
 
-    manager = Read_Json_file.load_from_json(
-        r"C:\Users\Zheka1998\Desktop\TaskОne_2\data\products.json"
-    )
+    manager = Read_Json_file.load_from_json(r"C:\Users\Zheka1998\Desktop\TaskОne_2\data\products.json")
 
     print(manager)
     print()

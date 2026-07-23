@@ -8,7 +8,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.learn_OOP import Category, Product, Read_Json_file  # type: ignore[import-not-found]
+from src.learn_OOP import Category, Product, Read_Json_file
 
 
 @pytest.fixture(autouse=True)
@@ -16,7 +16,6 @@ def reset_counters() -> Iterator[None]:
     """Сбрасывает счётчики классов перед каждым тестом."""
     Product.product_count = 0
     Category.category_count = 0
-    # ИСПРАВЛЕНО: сброс нового счётчика товаров во всех категориях
     Category.product_count = 0
     yield
 
@@ -77,11 +76,23 @@ class TestProduct:
 
 class TestCategory:
 
-    def test_category_init(self) -> None:
+    def test_category_init_empty(self) -> None:
+        """Создание категории без товаров (по умолчанию)."""
         category = Category("Электроника", "Гаджеты")
         assert category.name == "Электроника"
         assert category.description == "Гаджеты"
         assert category.products == []
+
+    def test_category_init_with_products(self) -> None:
+        """Создание категории с переданным списком товаров."""
+        p1 = Product("Смартфон", "Описание", 79990.0, 15)
+        p2 = Product("Ноутбук", "Игровой", 129990.0, 8)
+        category = Category("Электроника", "Гаджеты", products=[p1, p2])
+
+        assert category.name == "Электроника"
+        assert len(category.products) == 2
+        assert category.products[0].name == "Смартфон"
+        assert category.products[1].name == "Ноутбук"
 
     def test_category_count_increments(self) -> None:
         """Атрибут класса: счётчик категорий увеличивается при инициализации."""
@@ -93,46 +104,50 @@ class TestCategory:
         Category("К2", "О2")
         assert Category.category_count == 2
 
-    # ИСПРАВЛЕНО: новый тест — проверяет реализацию логики подсчёта Category.product_count
-    def test_product_count_increments_on_add(self) -> None:
-        """Атрибут класса Category.product_count увеличивается при add_product."""
+    def test_product_count_increments_on_init(self) -> None:
+        """Category.product_count увеличивается при создании категории с товарами."""
         assert Category.product_count == 0
 
-        cat = Category("Электроника", "Гаджеты")
-        cat.add_product(Product("Т1", "О", 10.0, 1))
-        # ИСПРАВЛЕНО: проверка, что product_count реально изменяется
+        p1 = Product("Т1", "О", 10.0, 1)
+        Category("Электроника", "Гаджеты", products=[p1])
         assert Category.product_count == 1
 
-        cat.add_product(Product("Т2", "О", 20.0, 2))
-        assert Category.product_count == 2
-
-    # ИСПРАВЛЕНО: новый тест — проверяет, что счётчик общий для всех категорий
-    def test_product_count_increments_across_categories(self) -> None:
-        """Category.product_count — общий счётчик товаров по всем категориям."""
-        cat1 = Category("К1", "О1")
-        cat2 = Category("К2", "О2")
-
-        cat1.add_product(Product("Т1", "О", 10.0, 1))
-        cat2.add_product(Product("Т2", "О", 20.0, 2))
-        cat2.add_product(Product("Т3", "О", 30.0, 3))
-
-        # ИСПРАВЛЕНО: проверка, что product_count суммируется по всем категориям
+        p2 = Product("Т2", "О", 20.0, 2)
+        p3 = Product("Т3", "О", 30.0, 3)
+        Category("Одежда", "Мужская", products=[p2, p3])
         assert Category.product_count == 3
 
-    def test_add_product(self) -> None:
-        category = Category("Электроника", "Гаджеты")
-        product = Product("Смартфон", "Описание", 100.0, 5)
-        category.add_product(product)
-        assert len(category.products) == 1
-        assert category.products[0].name == "Смартфон"
+    def test_product_count_increments_across_categories(self) -> None:
+        """Category.product_count — общий счётчик товаров по всем категориям."""
+        p1 = Product("Т1", "О", 10.0, 1)
+        p2 = Product("Т2", "О", 20.0, 2)
+        p3 = Product("Т3", "О", 30.0, 3)
+
+        Category("К1", "О1", products=[p1])
+        Category("К2", "О2", products=[p2, p3])
+
+        assert Category.product_count == 3
+
+    def test_empty_category_does_not_affect_product_count(self) -> None:
+        """Создание категории без товаров не меняет Category.product_count."""
+        Category("Пустая", "О")
+        Category("Тоже пустая", "О")
+        assert Category.product_count == 0
 
     def test_get_total_products(self) -> None:
+        category = Category(
+            "Электроника",
+            "Гаджеты",
+            products=[
+                Product("Т1", "О", 10.0, 1),
+                Product("Т2", "О", 20.0, 2),
+            ],
+        )
+        assert category.get_total_products() == 2
+
+    def test_get_total_products_empty(self) -> None:
         category = Category("Электроника", "Гаджеты")
         assert category.get_total_products() == 0
-
-        category.add_product(Product("Т1", "О", 10.0, 1))
-        category.add_product(Product("Т2", "О", 20.0, 2))
-        assert category.get_total_products() == 2
 
     def test_category_str(self) -> None:
         category = Category("Электроника", "Гаджеты")
@@ -140,12 +155,35 @@ class TestCategory:
         assert "Электроника" in result
         assert "0" in result
 
+    def test_category_str_with_products(self) -> None:
+        category = Category(
+            "Электроника",
+            "Гаджеты",
+            products=[
+                Product("Т1", "О", 10.0, 1),
+                Product("Т2", "О", 20.0, 2),
+            ],
+        )
+        result = str(category)
+        assert "Электроника" in result
+        assert "2" in result
+
     def test_category_to_dict(self) -> None:
-        category = Category("Электроника", "Гаджеты")
-        category.add_product(Product("Т1", "О", 10.0, 1))
+        category = Category(
+            "Электроника",
+            "Гаджеты",
+            products=[Product("Т1", "О", 10.0, 1)],
+        )
         result = category.to_dict()
         assert result["name"] == "Электроника"
+        assert result["description"] == "Гаджеты"
         assert len(result["products"]) == 1
+        assert result["products"][0]["name"] == "Т1"
+
+    def test_category_to_dict_empty(self) -> None:
+        category = Category("Пустая", "Описание")
+        result = category.to_dict()
+        assert result["products"] == []
 
     def test_category_from_dict(self) -> None:
         data = {
@@ -159,11 +197,14 @@ class TestCategory:
         category = Category.from_dict(data)
         assert category.name == "Электроника"
         assert category.get_total_products() == 2
+        assert category.products[0].name == "Т1"
+        assert category.products[1].price == 20.0
 
     def test_category_from_dict_empty_products(self) -> None:
         data = {"name": "Пустая", "description": "Без товаров"}
         category = Category.from_dict(data)
         assert category.get_total_products() == 0
+        assert category.products == []
 
     def test_category_from_dict_increments_counts(self) -> None:
         """from_dict увеличивает category_count, product_count и Product.product_count."""
@@ -178,7 +219,6 @@ class TestCategory:
         Category.from_dict(data)
 
         assert Category.category_count == 1
-        # ИСПРАВЛЕНО: проверка, что Category.product_count реально изменился
         assert Category.product_count == 2
         assert Product.product_count == 2
 
@@ -206,9 +246,14 @@ class TestReadJsonFile:
 
     def test_get_total_products(self) -> None:
         manager = Read_Json_file()
-        cat = Category("К1", "О1")
-        cat.add_product(Product("Т1", "О", 10.0, 1))
-        cat.add_product(Product("Т2", "О", 20.0, 2))
+        cat = Category(
+            "К1",
+            "О1",
+            products=[
+                Product("Т1", "О", 10.0, 1),
+                Product("Т2", "О", 20.0, 2),
+            ],
+        )
         manager.add_category(cat)
         assert manager.get_total_products() == 2
 
@@ -303,7 +348,6 @@ class TestReadJsonFile:
         Read_Json_file.load_from_json(str(json_file))
 
         assert Category.category_count == 2
-        # ИСПРАВЛЕНО: проверка, что Category.product_count обновился при загрузке JSON
         assert Category.product_count == 3
         assert Product.product_count == 3
 
@@ -340,6 +384,23 @@ class TestIntegration:
         assert len(manager.get_all_categories()) == 2
         assert manager.get_total_products() == 3
         assert Category.category_count == 2
-        # ИСПРАВЛЕНО: проверка нового атрибута в интеграционном тесте
+        assert Category.product_count == 3
+        assert Product.product_count == 3
+
+    def test_full_workflow_with_manual_creation(self) -> None:
+        """Ручное создание категорий и товаров без JSON."""
+        p1 = Product("Смартфон", "Флагман", 79990.0, 15)
+        p2 = Product("Ноутбук", "Игровой", 129990.0, 8)
+        p3 = Product("Куртка", "Зимняя", 8990.0, 25)
+
+        cat1 = Category("Электроника", "Гаджеты", products=[p1, p2])
+        cat2 = Category("Одежда", "Мужская", products=[p3])
+
+        manager = Read_Json_file()
+        manager.add_category(cat1)
+        manager.add_category(cat2)
+
+        assert manager.get_total_products() == 3
+        assert Category.category_count == 2
         assert Category.product_count == 3
         assert Product.product_count == 3
