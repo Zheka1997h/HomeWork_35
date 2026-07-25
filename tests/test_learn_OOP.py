@@ -1,7 +1,7 @@
 import json
 import sys
 from pathlib import Path
-from typing import Iterator
+from typing import Iterator, Dict, List, Any
 from unittest.mock import patch
 
 import pytest
@@ -18,6 +18,9 @@ def reset_counters() -> Iterator[None]:
     Category.category_count = 0
     Category.product_count = 0
     yield
+    Product.product_count = 0
+    Category.category_count = 0
+    Category.product_count = 0
 
 
 # ==================== ТЕСТЫ ДЛЯ Product ====================
@@ -70,6 +73,74 @@ class TestProduct:
         Product.from_dict({"name": "Т", "description": "О", "price": 1.0, "quantity": 1})
         assert Product.product_count == 1
 
+    # === Тесты для геттера/сеттера цены ===
+
+    def test_product_price_getter(self) -> None:
+        product = Product("Тест", "Описание", 100.0, 1)
+        assert product.price == 100.0
+
+    def test_product_price_setter_invalid_zero(self, capsys: pytest.CaptureFixture[str]) -> None:
+        product = Product("Тест", "Описание", 100.0, 1)
+        product.price = 0
+        assert product.price == 100.0
+        captured = capsys.readouterr()
+        assert "Цена не должна быть нулевая или отрицательная" in captured.out
+
+    def test_product_price_setter_invalid_negative(self, capsys: pytest.CaptureFixture[str]) -> None:
+        product = Product("Тест", "Описание", 100.0, 1)
+        product.price = -50
+        assert product.price == 100.0
+        captured = capsys.readouterr()
+        assert "Цена не должна быть нулевая или отрицательная" in captured.out
+
+    def test_product_price_setter_valid(self) -> None:
+        product = Product("Тест", "Описание", 100.0, 1)
+        product.price = 150.0
+        assert product.price == 150.0
+
+    def test_product_price_setter_decrease_confirmed(self, monkeypatch:pytest.MonkeyPatch) -> None:
+        """Доп. задание: подтверждение понижения цены (y)."""
+        product = Product("Тест", "Описание", 100.0, 1)
+        monkeypatch.setattr("builtins.input", lambda _: "y")
+        product.price = 80.0
+        assert product.price == 80.0
+
+    def test_product_price_setter_decrease_cancelled(self, monkeypatch:pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+        """Доп. задание: отмена понижения цены (n)."""
+        product = Product("Тест", "Описание", 100.0, 1)
+        monkeypatch.setattr("builtins.input", lambda _: "n")
+        product.price = 80.0
+        assert product.price == 100.0
+        captured = capsys.readouterr()
+        assert "Изменение цены отменено." in captured.out
+
+    # === Тесты для класс-метода new_product ===
+
+    def test_product_new_product_from_dict(self) -> None:
+        data = {"name": "Молоко", "description": "1л", "price": 80.5, "quantity": 100}
+        p = Product.new_product(data)
+        assert p.name == "Молоко"
+        assert p.price == 80.5
+        assert Product.product_count == 1
+
+    def test_product_new_product_duplicate(self) -> None:
+        """Доп. задание: обработка дубликатов (сложение количества, выбор большей цены)."""
+        existing = [Product("Хлеб", "Белый", 40, 10)]
+        new_data = {"name": "Хлеб", "description": "Ржаной", "price": 50, "quantity": 5}
+        result = Product.new_product(new_data, existing_products=existing)
+        assert result is existing[0]
+        assert result.quantity == 15
+        assert result.price == 50.0
+
+    def test_product_new_product_duplicate_lower_price(self) -> None:
+        """Доп. задание: если новая цена ниже, оставляем старую."""
+        existing = [Product("Хлеб", "Белый", 50, 10)]
+        new_data = {"name": "Хлеб", "description": "Ржаной", "price": 40, "quantity": 5}
+        result = Product.new_product(new_data, existing_products=existing)
+        assert result is existing[0]
+        assert result.quantity == 15
+        assert result.price == 50.0
+
 
 # ==================== ТЕСТЫ ДЛЯ Category ====================
 
@@ -81,7 +152,7 @@ class TestCategory:
         category = Category("Электроника", "Гаджеты")
         assert category.name == "Электроника"
         assert category.description == "Гаджеты"
-        assert category.products == []
+        assert category.products == ""  # Геттер возвращает пустую строку
 
     def test_category_init_with_products(self) -> None:
         """Создание категории с переданным списком товаров."""
@@ -90,9 +161,9 @@ class TestCategory:
         category = Category("Электроника", "Гаджеты", products=[p1, p2])
 
         assert category.name == "Электроника"
-        assert len(category.products) == 2
-        assert category.products[0].name == "Смартфон"
-        assert category.products[1].name == "Ноутбук"
+        assert category.get_total_products() == 2
+        expected_str = "Смартфон, 79990.0 руб. Остаток: 15 шт.\nНоутбук, 129990.0 руб. Остаток: 8 шт.\n"
+        assert category.products == expected_str
 
     def test_category_count_increments(self) -> None:
         """Атрибут класса: счётчик категорий увеличивается при инициализации."""
@@ -197,14 +268,14 @@ class TestCategory:
         category = Category.from_dict(data)
         assert category.name == "Электроника"
         assert category.get_total_products() == 2
-        assert category.products[0].name == "Т1"
-        assert category.products[1].price == 20.0
+        expected_str = "Т1, 10.0 руб. Остаток: 1 шт.\nТ2, 20.0 руб. Остаток: 2 шт.\n"
+        assert category.products == expected_str
 
     def test_category_from_dict_empty_products(self) -> None:
         data = {"name": "Пустая", "description": "Без товаров"}
         category = Category.from_dict(data)
         assert category.get_total_products() == 0
-        assert category.products == []
+        assert category.products == ""
 
     def test_category_from_dict_increments_counts(self) -> None:
         """from_dict увеличивает category_count, product_count и Product.product_count."""
@@ -221,6 +292,32 @@ class TestCategory:
         assert Category.category_count == 1
         assert Category.product_count == 2
         assert Product.product_count == 2
+
+    # === Новые тесты для add_product и геттера products ===
+
+    def test_category_add_product(self) -> None:
+        category = Category("Электроника", "Гаджеты")
+        p1 = Product("Т1", "О", 10.0, 1)
+        p2 = Product("Т2", "О", 20.0, 2)
+
+        category.add_product(p1)
+        assert category.get_total_products() == 1
+        assert Category.product_count == 1
+
+        category.add_product(p2)
+        assert category.get_total_products() == 2
+        assert Category.product_count == 2
+
+    def test_category_products_getter_format(self) -> None:
+        """Проверка формата строки геттера products."""
+        category = Category("Фрукты", "Еда")
+        p1 = Product("Яблоко", "Красное", 50, 15)
+        p2 = Product("Банан", "Желтый", 80, 20)
+        category.add_product(p1)
+        category.add_product(p2)
+
+        expected_str = "Яблоко, 50 руб. Остаток: 15 шт.\nБанан, 80 руб. Остаток: 20 шт.\n"
+        assert category.products == expected_str
 
 
 # ==================== ТЕСТЫ ДЛЯ Read_Json_file ====================
@@ -317,7 +414,7 @@ class TestReadJsonFile:
             assert manager.categories == []
 
     def test_load_empty_categories(self, tmp_path: Path) -> None:
-        data = {"categories": []}
+        data: Dict[str, List[Any]] = {"categories": []}
         json_file = tmp_path / "test.json"
         json_file.write_text(json.dumps(data), encoding="utf-8")
         manager = Read_Json_file.load_from_json(str(json_file))
