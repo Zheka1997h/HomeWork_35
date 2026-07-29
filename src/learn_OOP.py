@@ -6,43 +6,39 @@ from typing import Any, Dict, List, Optional
 class Product:
     """Класс, представляющий товар."""
 
-    # === Атрибуты класса ===
-    product_count: int = 0  # Общее количество созданных товаров
+    product_count: int = 0
 
     def __init__(self, name: str, description: str, price: float, quantity: int):
         self.name = name
         self.description = description
         self.quantity = quantity
 
-        # Инициализируем приватный атрибут цены перед вызовом сеттера
         self.__price: float = 0.0
-        # Используем сеттер для установки цены (чтобы сработала валидация)
         self.price = price
 
         Product.product_count += 1
 
+    # === ИСПРАВЛЕННЫЙ __str__ ===
     def __str__(self) -> str:
-        return (
-            f"Продукт: {self.name}\n"
-            f"Описание: {self.description}\n"
-            f"Цена: {self.__price}\n"
-            f"Количество: {self.quantity}"
-        )
+        return f"{self.name}, {self.__price} руб. Остаток: {self.quantity} шт."
 
-    # === Геттер и Сеттер для цены ===
+    # === ИСПРАВЛЕННЫЙ __add__ ===
+    def __add__(self, other: "Product") -> float:
+        """Возвращает общую стоимость товаров на складе."""
+        if not isinstance(other, Product):
+            raise TypeError("Можно складывать только объекты Product")
+        return (self.price * self.quantity) + (other.price * other.quantity)
+
     @property
     def price(self) -> float:
-        """Геттер для приватного атрибута цены."""
         return self.__price
 
     @price.setter
     def price(self, new_price: float) -> None:
-        """Сеттер для приватного атрибута цены."""
         if new_price <= 0:
             print("Цена не должна быть нулевая или отрицательная")
             return
 
-        # * Дополнительное задание: подтверждение при понижении цены
         if self.__price > 0 and new_price < self.__price:
             confirm = input(f"Цена понижается с {self.__price} до {new_price}. Подтвердите (y/n): ")
             if confirm.lower() != "y":
@@ -51,26 +47,18 @@ class Product:
 
         self.__price = new_price
 
-    # === Класс-метод ===
     @classmethod
     def new_product(
         cls, product_dict: Dict[str, Any], existing_products: Optional[List["Product"]] = None
     ) -> "Product":
-        """
-        Создает объект Product из словаря.
-        Если передан список существующих товаров, проверяет на дубликаты.
-        """
         if existing_products:
             for product in existing_products:
                 if product.name == product_dict["name"]:
-                    # Товар уже существует: складываем количество
                     product.quantity += product_dict["quantity"]
-                    # При конфликте цен выбираем более высокую
                     if product_dict["price"] > product.price:
                         product.price = product_dict["price"]
                     return product
 
-        # Если дубликата нет, создаем новый объект
         return cls(
             name=product_dict["name"],
             description=product_dict["description"],
@@ -79,7 +67,6 @@ class Product:
         )
 
     def to_dict(self) -> Dict[str, Any]:
-        """Преобразование в словарь для JSON."""
         return {
             "name": self.name,
             "description": self.description,
@@ -89,53 +76,44 @@ class Product:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Product":
-        """Создание объекта Product из словаря (для обратной совместимости)."""
         return cls.new_product(data)
 
 
 class Category:
     """Класс, представляющий категорию товаров."""
 
-    # === Атрибуты класса ===
-    category_count: int = 0  # Общее количество созданных категорий
-    product_count: int = 0  # Общее количество товаров во ВСЕХ категориях
+    category_count: int = 0
+    product_count: int = 0
 
     def __init__(self, name: str, description: str, products: Optional[List[Product]] = None):
         self.name = name
         self.description = description
-
-        # Приватный атрибут списка товаров
         self.__products: List[Product] = []
 
-        # Добавляем товары через метод add_product, чтобы корректно работал счетчик
         if products:
             for product in products:
                 self.add_product(product)
 
         Category.category_count += 1
 
+    # === ИСПРАВЛЕННЫЙ __str__ ===
+    def __str__(self) -> str:
+        total_quantity = sum(product.quantity for product in self.__products)
+        return f"{self.name}, количество продуктов: {total_quantity} шт."
+
     def add_product(self, product: Product) -> None:
-        """Добавляет продукт в приватный список и увеличивает счетчик."""
         self.__products.append(product)
         Category.product_count += 1
 
+    # === ОПТИМИЗИРОВАННЫЙ ГЕТТЕР ===
     @property
     def products(self) -> str:
-        """Геттер, возвращающий строку со всеми продуктами в заданном формате."""
-        result_str = ""
-        for p in self.__products:
-            result_str += f"{p.name}, {p.price} руб. Остаток: {p.quantity} шт.\n"
-        return result_str
+        return "\n".join(str(p) for p in self.__products)
 
     def get_total_products(self) -> int:
-        """Возвращает количество товаров в данной категории."""
         return len(self.__products)
 
-    def __str__(self) -> str:
-        return f"Категория: {self.name} | Товаров: {self.get_total_products()}"
-
     def to_dict(self) -> Dict[str, Any]:
-        """Преобразование в словарь для JSON."""
         return {
             "name": self.name,
             "description": self.description,
@@ -144,7 +122,6 @@ class Category:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Category":
-        """Создание объекта Category из словаря."""
         products = [Product.from_dict(p) for p in data.get("products", [])]
         return cls(
             name=data["name"],
@@ -198,12 +175,10 @@ class Read_Json_file:
 
 
 if __name__ == "__main__":
-    # Сбрасываем счётчики перед запуском
     Product.product_count = 0
     Category.category_count = 0
     Category.product_count = 0
 
-    # Загрузка данных (путь к вашему файлу)
     manager = Read_Json_file.load_from_json(r"C:\Users\Zheka1998\Desktop\TaskОne_2\data\products.json")
 
     print(manager)
@@ -211,7 +186,6 @@ if __name__ == "__main__":
 
     for category in manager.get_all_categories():
         print(category)
-        # Используем геттер products для вывода списка
         print(category.products)
 
     print(f"Всего создано категорий: {Category.category_count}")
