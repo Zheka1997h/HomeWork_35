@@ -25,9 +25,12 @@ class Product:
     # === ИСПРАВЛЕННЫЙ __add__ ===
     def __add__(self, other: "Product") -> float:
         """Возвращает общую стоимость товаров на складе."""
-        if not isinstance(other, Product):
-            raise TypeError("Можно складывать только объекты Product")
-        return (self.price * self.quantity) + (other.price * other.quantity)
+        if type(self) != type(other):
+            raise TypeError(
+                f"Нельзя складывать товары разных типов"
+                f"{type(self).__name__}"
+            )
+        return (self.price * self.quantity + (other.price * other.quantity))
 
     @property
     def price(self) -> float:
@@ -76,7 +79,31 @@ class Product:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Product":
-        return cls.new_product(data)
+        product_type = data.get("type","Product")
+
+        if product_type == "Smartphone":
+            return Smartphone(
+                name=data["name"],
+                description=data["description"],
+                price=data["price"],
+                quantity=data["quantity"],
+                efficiency=data["efficiency"],
+                model=data["model"],
+                memory=data["memory"],
+                color=data["color"],
+            )
+        elif product_type == "LawnGrass":
+            return LawnGrass(
+                name=data["name"],
+                description=data["description"],
+                price=data["price"],
+                quantity=data["quantity"],
+                country=data["country"],
+                germination_period=data["germination_period"],
+                color=data["color"]
+            )
+        else:
+            return cls.new_product(data)
 
 
 class Category:
@@ -102,6 +129,11 @@ class Category:
         return f"{self.name}, количество продуктов: {total_quantity} шт."
 
     def add_product(self, product: Product) -> None:
+        if not isinstance(product, Product):
+            raise TypeError(
+                f"В категорию можно добавлять только объекты Product или его наследников,"
+                f"а не {type(product).__name__}"
+            )
         self.__products.append(product)
         Category.product_count += 1
 
@@ -174,6 +206,79 @@ class Read_Json_file:
         return f"Менеджер: {len(self.categories)} категорий, {self.get_total_products()} товаров"
 
 
+class Smartphone(Product):
+
+    def __init__(self,
+                 name: str,
+                 description: str,
+                 price:float,
+                 quantity:int,
+                 efficiency: float,
+                 model: str,
+                 memory: int,
+                 color: str,):
+     super().__init__(name, description, price,quantity)
+     self.efficiency = efficiency
+     self.model = model
+     self.memory = memory
+     self.color = color
+
+
+    def __str__(self) -> str:
+        return (
+            f"{self.name}({self.model},{self.color},"
+            f"{self.memory}GB), {self.price} руб. Остаток: {self.quantity} шт."
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        data = super().to_dict()
+        data.update({
+            "type":"Smartphone",
+            "efficiency":self.efficiency,
+            "model":self.model,
+            "memory":self.memory,
+            "color": self.color
+        })
+        return data
+
+
+
+
+class LawnGrass(Product):
+    def __init__(self,
+                 name:str,
+                 description:str,
+                 price:float,
+                 quantity:int,
+                 country:str,
+                 germination_period:int,
+                 color:str,):
+     super().__init__(name,description,price,quantity)
+     self.country = country
+     self.germination_period = germination_period
+     self.color = color
+
+
+    def __str__(self)->str:
+        return (
+            f"{self.name} ({self.color}, страна: {self.country}),"
+            f"{self.price} руб. Остаток: {self.quantity} шт."
+        )
+
+    def to_dict(self) -> Dict[str,Any]:
+        data = super().to_dict()
+        data.update(
+            {
+                "type":"LawnGrass",
+                "country":self.country,
+                "germination_period":self.germination_period,
+                "color":self.color,
+            }
+        )
+        return data
+
+
+
 if __name__ == "__main__":
     Product.product_count = 0
     Category.category_count = 0
@@ -187,7 +292,105 @@ if __name__ == "__main__":
     for category in manager.get_all_categories():
         print(category)
         print(category.products)
+        print()
 
-    print(f"Всего создано категорий: {Category.category_count}")
+    print(f"\nВсего создано категорий: {Category.category_count}")
     print(f"Всего создано товаров: {Product.product_count}")
     print(f"Всего товаров во всех категориях: {Category.product_count}")
+
+    print("\n" + "=" * 50)
+    print("ДЕМОНСТРАЦИЯ НОВОЙ ФУНКЦИОНАЛЬНОСТИ")
+    print("=" * 50)
+
+    # Создаём траву
+    grass1 = LawnGrass(
+        name="Green Lawn",
+        description="Газонная трава премиум",
+        price=500.0,
+        quantity=10,
+        country="Germany",
+        germination_period=14,
+        color="Green",
+    )
+
+    grass2 = LawnGrass(
+        name="Sport Grass",
+        description="Трава для спортивных газонов",
+        price=700.0,
+        quantity=8,
+        country="Netherlands",
+        germination_period=10,
+        color="Dark Green",
+    )
+
+    phone1 = Smartphone(
+        name="IPhone 15 Pro",
+        description="Флагман Apple",
+        price=99990.0,
+        quantity=5,
+        efficiency=95.5,
+        model="IPhone 15 Pro",
+        memory=256,
+        color="Black",
+    )
+
+    phone2 = Smartphone(
+        name="Samsung Galaxy S24",
+        description="Флагман Samsung",
+        price=89990.0,
+        quantity=3,
+        efficiency=92.0,
+        model="Galaxy S24 Ultra",
+        memory=512,
+        color="Titanium",
+    )
+
+    print("\n✅ Созданные товары:")
+    print(phone1)
+    print(phone2)
+    print(grass1)
+    print(grass2)
+
+    print("\n✅ Сложение двух смартфонов:")
+    total_phones = phone1 + phone2
+    print(f"Общая стоимость: {total_phones} руб.")
+
+    print("\n✅ Сложение двух трав:")
+    total_grass = grass1 + grass2
+    print(f"Общая стоимость: {total_grass} руб.")
+
+    # Проверяем защиту от сложения разных классов
+    print("\n❌ Попытка сложить смартфон и траву:")
+    try:
+        phone1 + grass1
+    except TypeError as e:
+        print(f"Ошибка: {e}")
+
+    # ✅ ТЕПЕРЬ ЭТО НА ТОМ ЖЕ УРОВНЕ, ЧТО И try/except ВЫШЕ
+    print("\n✅ Добавление товаров в категорию:")
+    tech_category = Category("Электроника", "Смартфоны и гаджеты")
+    tech_category.add_product(phone1)
+    tech_category.add_product(phone2)
+    print(tech_category)
+    print(tech_category.products)
+
+    garden_category = Category("Сад", "Товары для сада")
+    garden_category.add_product(grass1)
+    garden_category.add_product(grass2)
+    print(garden_category)
+    print(garden_category.products)
+
+    # Проверяем защиту от добавления посторонних объектов
+    print("\n❌ Попытка добавить строку в категорию:")
+    try:
+        tech_category.add_product("Не продукт")
+    except TypeError as e:
+        print(f"Ошибка: {e}")
+
+    print("\n❌ Попытка добавить число в категорию:")
+    try:
+        tech_category.add_product(123)
+    except TypeError as e:
+        print(f"Ошибка: {e}")
+
+    print("\n✅ Все проверки пройдены!")

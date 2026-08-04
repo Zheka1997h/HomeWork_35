@@ -71,3 +71,13 @@ exclude = '''
 
 [tool.isort]
 line_length = 119
+
+[tool.coverage.run]
+omit = ["*/tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "if __name__ == .__main__.:",
+    "pass",
+    "raise NotImplementedError",
+]
