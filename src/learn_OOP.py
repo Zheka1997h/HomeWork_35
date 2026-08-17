@@ -3,7 +3,16 @@ from __future__ import annotations
 import json
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
+
+
+# ==================== ДОПОЛНИТЕЛЬНОЕ ЗАДАНИЕ (*) ====================
+class ZeroQuantityError(Exception):
+    """Пользовательское исключение для товаров с нулевым количеством."""
+
+    def __init__(self, product_name: str) -> None:
+        self.product_name = product_name
+        super().__init__(f"Товар '{product_name}' имеет нулевое количество и не может быть добавлен.")
 
 
 class CreationMixin:
@@ -24,7 +33,8 @@ class BaseEntity(ABC):
         self.description = description
 
     @abstractmethod
-    def __str__(self) -> str: ...
+    def __str__(self) -> str:
+        ...
 
     def to_dict(self) -> Dict[str, Any]:
         return {"name": self.name, "description": self.description}
@@ -59,13 +69,16 @@ class BaseProduct(BaseEntity):
         self._price = value
 
     @abstractmethod
-    def __str__(self) -> str: ...
+    def __str__(self) -> str:
+        ...
 
     @abstractmethod
-    def __add__(self, other: BaseProduct) -> float: ...
+    def __add__(self, other: BaseProduct) -> float:
+        ...
 
     @abstractmethod
-    def to_dict(self) -> Dict[str, Any]: ...
+    def to_dict(self) -> Dict[str, Any]:
+        ...
 
 
 class Product(CreationMixin, BaseProduct):
@@ -127,7 +140,10 @@ class Product(CreationMixin, BaseProduct):
             quantity=data["quantity"],
         )
 
+    # ==================== ЗАДАНИЕ 1 ====================
     def __init__(self, name: str, description: str, price: float, quantity: int) -> None:
+        if quantity == 0:
+            raise ValueError("Товар с нулевым количеством не может быть добавлен")
         if price <= 0:
             print("Цена не должна быть нулевая или отрицательная")
             price = 0.0
@@ -242,15 +258,38 @@ class Category(BaseEntity):
         Category.category_count += 1
         Category.product_count += len(self._products)
 
+    # ==================== ДОПОЛНИТЕЛЬНОЕ ЗАДАНИЕ (*) ====================
     def add_product(self, product: Product) -> None:
-        """Добавляет продукт в категорию."""
-        if not isinstance(product, Product):
-            raise TypeError("Можно добавлять только объекты класса Product")
-        self._products.append(product)
-        Category.product_count += 1
+        """Добавляет продукт в категорию с обработкой нулевого количества."""
+        try:
+            # ✅ СНАЧАЛА проверяем тип, иначе AttributeError на .quantity
+            if not isinstance(product, Product):
+                raise TypeError("Можно добавлять только объекты класса Product")
+            # ✅ Только теперь безопасно обращаемся к product.quantity
+            if product.quantity == 0:
+                raise ZeroQuantityError(product.name)
+        except ZeroQuantityError as e:
+            print(f"Ошибка: {e}")
+        except TypeError as e:
+            print(f"Ошибка: {e}")
+        else:
+            self._products.append(product)
+            Category.product_count += 1
+            print(f"Товар '{product.name}' успешно добавлен в категорию '{self.name}'.")
+        finally:
+            print("Обработка добавления товара завершена.")
 
     def get_total_products(self) -> int:
         return len(self._products)
+
+    # ==================== ЗАДАНИЕ 2 ====================
+    def average_price(self) -> float:
+        """Подсчитывает средний ценник всех товаров в категории."""
+        try:
+            total_price = sum(p.price for p in self._products)
+            return total_price / len(self._products)
+        except ZeroDivisionError:
+            return 0.0
 
     @property
     def products(self) -> str:
@@ -279,26 +318,26 @@ class Category(BaseEntity):
             products=products,
         )
 
-    # --- Методы ниже используются только для тестирования валидации ---
-    # Они намеренно принимают некорректные типы, поэтому mypy подавляется
-
-    def _test_add_invalid_string(self) -> None:
-        self.add_product("Не продукт")  # type: ignore[arg-type]
-
-    def _test_add_invalid_int(self) -> None:
-        self.add_product(123)  # type: ignore[arg-type]
-
-    def _test_add_invalid_none(self) -> None:
-        self.add_product(None)  # type: ignore[arg-type]
-
 
 class Order(BaseEntity):
     """Класс заказа."""
 
+    # ==================== ДОПОЛНИТЕЛЬНОЕ ЗАДАНИЕ (*) ====================
     def __init__(self, name: str, description: str, product: Product, quantity: int) -> None:
         super().__init__(name, description)
-        self.product = product
-        self.quantity = quantity
+        try:
+            if quantity == 0:
+                raise ZeroQuantityError(product.name)
+        except ZeroQuantityError as e:
+            print(f"Ошибка при создании заказа: {e}")
+            self.product = product
+            self.quantity = 0
+        else:
+            self.product = product
+            self.quantity = quantity
+            print(f"Заказ '{name}' успешно создан с товаром '{product.name}'.")
+        finally:
+            print("Обработка создания заказа завершена.")
 
     @property
     def total_cost(self) -> float:
