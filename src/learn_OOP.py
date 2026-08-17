@@ -1,86 +1,104 @@
+from __future__ import annotations
+
 import json
+from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 
-class Product:
-    """Класс, представляющий товар."""
+class CreationMixin:
+    """Миксин для вывода информации о создании объекта."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        params = ", ".join(repr(arg) for arg in args)
+        print(f"{self.__class__.__name__}({params})")
+
+
+class BaseEntity(ABC):
+    """Абстрактный базовый класс для всех сущностей."""
+
+    @abstractmethod
+    def __init__(self, name: str, description: str) -> None:
+        self.name = name
+        self.description = description
+
+    @abstractmethod
+    def __str__(self) -> str: ...
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"name": self.name, "description": self.description}
+
+
+class BaseProduct(BaseEntity):
+    """Абстрактный базовый класс для продуктов."""
 
     product_count: int = 0
 
-    def __init__(self, name: str, description: str, price: float, quantity: int):
-        self.name = name
-        self.description = description
+    @abstractmethod
+    def __init__(self, name: str, description: str, price: float, quantity: int) -> None:
+        super().__init__(name, description)
+        self._price = price
         self.quantity = quantity
-
-        self.__price: float = 0.0
-        self.price = price
-
-        Product.product_count += 1
-
-    # === ИСПРАВЛЕННЫЙ __str__ ===
-    def __str__(self) -> str:
-        return f"{self.name}, {self.__price} руб. Остаток: {self.quantity} шт."
-
-    # === ИСПРАВЛЕННЫЙ __add__ ===
-    def __add__(self, other: "Product") -> float:
-        """Возвращает общую стоимость товаров на складе."""
-        if type(self) != type(other):
-            raise TypeError(
-                f"Нельзя складывать товары разных типов"
-                f"{type(self).__name__}"
-            )
-        return (self.price * self.quantity + (other.price * other.quantity))
+        BaseProduct.product_count += 1
 
     @property
     def price(self) -> float:
-        return self.__price
+        return self._price
 
     @price.setter
-    def price(self, new_price: float) -> None:
-        if new_price <= 0:
+    def price(self, value: float) -> None:
+        if value <= 0:
             print("Цена не должна быть нулевая или отрицательная")
             return
-
-        if self.__price > 0 and new_price < self.__price:
-            confirm = input(f"Цена понижается с {self.__price} до {new_price}. Подтвердите (y/n): ")
+        if value < self._price:
+            confirm = input("Вы уверены, что хотите понизить цену? (y/n): ")
             if confirm.lower() != "y":
                 print("Изменение цены отменено.")
                 return
+        self._price = value
 
-        self.__price = new_price
+    @abstractmethod
+    def __str__(self) -> str: ...
+
+    @abstractmethod
+    def __add__(self, other: BaseProduct) -> float: ...
+
+    @abstractmethod
+    def to_dict(self) -> Dict[str, Any]: ...
+
+
+class Product(CreationMixin, BaseProduct):
+    """Класс продукта."""
 
     @classmethod
     def new_product(
-        cls, product_dict: Dict[str, Any], existing_products: Optional[List["Product"]] = None
-    ) -> "Product":
-        if existing_products:
-            for product in existing_products:
-                if product.name == product_dict["name"]:
-                    product.quantity += product_dict["quantity"]
-                    if product_dict["price"] > product.price:
-                        product.price = product_dict["price"]
-                    return product
+        cls,
+        data: Dict[str, Any],
+        existing_products: Optional[List[Product]] = None,
+    ) -> Product:
+        """Создаёт новый продукт или обновляет существующий."""
+        if existing_products is None:
+            existing_products = []
+
+        for product in existing_products:
+            if product.name == data["name"]:
+                product.quantity += data["quantity"]
+                if data["price"] > product.price:
+                    product.price = data["price"]
+                return product
 
         return cls(
-            name=product_dict["name"],
-            description=product_dict["description"],
-            price=product_dict["price"],
-            quantity=product_dict["quantity"],
+            name=data["name"],
+            description=data["description"],
+            price=data["price"],
+            quantity=data["quantity"],
         )
 
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "name": self.name,
-            "description": self.description,
-            "price": self.__price,
-            "quantity": self.quantity,
-        }
-
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Product":
-        product_type = data.get("type","Product")
-
+    def from_dict(cls, data: Dict[str, Any]) -> Product:
+        """Создаёт продукт из словаря, поддерживая наследников."""
+        product_type = data.get("type")
         if product_type == "Smartphone":
             return Smartphone(
                 name=data["name"],
@@ -92,7 +110,7 @@ class Product:
                 memory=data["memory"],
                 color=data["color"],
             )
-        elif product_type == "LawnGrass":
+        if product_type == "LawnGrass":
             return LawnGrass(
                 name=data["name"],
                 description=data["description"],
@@ -100,70 +118,202 @@ class Product:
                 quantity=data["quantity"],
                 country=data["country"],
                 germination_period=data["germination_period"],
-                color=data["color"]
+                color=data["color"],
             )
-        else:
-            return cls.new_product(data)
+        return cls(
+            name=data["name"],
+            description=data["description"],
+            price=data["price"],
+            quantity=data["quantity"],
+        )
 
+    def __init__(self, name: str, description: str, price: float, quantity: int) -> None:
+        if price <= 0:
+            print("Цена не должна быть нулевая или отрицательная")
+            price = 0.0
+        super().__init__(name, description, price, quantity)
 
-class Category:
-    """Класс, представляющий категорию товаров."""
-
-    category_count: int = 0
-    product_count: int = 0
-
-    def __init__(self, name: str, description: str, products: Optional[List[Product]] = None):
-        self.name = name
-        self.description = description
-        self.__products: List[Product] = []
-
-        if products:
-            for product in products:
-                self.add_product(product)
-
-        Category.category_count += 1
-
-    # === ИСПРАВЛЕННЫЙ __str__ ===
     def __str__(self) -> str:
-        total_quantity = sum(product.quantity for product in self.__products)
-        return f"{self.name}, количество продуктов: {total_quantity} шт."
+        return f"{self.name}, {self.price} руб. Остаток: {self.quantity} шт."
 
-    def add_product(self, product: Product) -> None:
-        if not isinstance(product, Product):
-            raise TypeError(
-                f"В категорию можно добавлять только объекты Product или его наследников,"
-                f"а не {type(product).__name__}"
-            )
-        self.__products.append(product)
-        Category.product_count += 1
-
-    # === ОПТИМИЗИРОВАННЫЙ ГЕТТЕР ===
-    @property
-    def products(self) -> str:
-        return "\n".join(str(p) for p in self.__products)
-
-    def get_total_products(self) -> int:
-        return len(self.__products)
+    def __add__(self, other: BaseProduct) -> float:
+        """Возвращает общую стоимость товаров на складе."""
+        if type(self) is not type(other):
+            raise TypeError(f"Нельзя складывать товары разных типов: {type(self).__name__}")
+        return self.price * self.quantity + other.price * other.quantity
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "name": self.name,
             "description": self.description,
-            "products": [p.to_dict() for p in self.__products],
+            "price": self.price,
+            "quantity": self.quantity,
+        }
+
+
+class Smartphone(Product):
+    """Класс смартфона."""
+
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        price: float,
+        quantity: int,
+        efficiency: float,
+        model: str,
+        memory: int,
+        color: str,
+    ) -> None:
+        super().__init__(name, description, price, quantity)
+        self.efficiency = efficiency
+        self.model = model
+        self.memory = memory
+        self.color = color
+
+    def __str__(self) -> str:
+        return (
+            f"{self.name}, {self.model}, {self.memory}GB, {self.color}, "
+            f"{self.price} руб. Остаток: {self.quantity} шт."
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        base = super().to_dict()
+        base.update(
+            {
+                "type": "Smartphone",
+                "efficiency": self.efficiency,
+                "model": self.model,
+                "memory": self.memory,
+                "color": self.color,
+            }
+        )
+        return base
+
+
+class LawnGrass(Product):
+    """Класс газонной травы."""
+
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        price: float,
+        quantity: int,
+        country: str,
+        germination_period: int,
+        color: str,
+    ) -> None:
+        super().__init__(name, description, price, quantity)
+        self.country = country
+        self.germination_period = germination_period
+        self.color = color
+
+    def __str__(self) -> str:
+        return f"{self.name}, {self.country}, {self.color}, " f"{self.price} руб. Остаток: {self.quantity} шт."
+
+    def to_dict(self) -> Dict[str, Any]:
+        base = super().to_dict()
+        base.update(
+            {
+                "type": "LawnGrass",
+                "country": self.country,
+                "germination_period": self.germination_period,
+                "color": self.color,
+            }
+        )
+        return base
+
+
+class Category(BaseEntity):
+    """Класс категории товаров."""
+
+    category_count: int = 0
+    product_count: int = 0
+
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        products: Optional[List[Product]] = None,
+    ) -> None:
+        super().__init__(name, description)
+        self._products: List[Product] = list(products) if products else []
+        Category.category_count += 1
+        Category.product_count += len(self._products)
+
+    def add_product(self, product: Product) -> None:
+        """Добавляет продукт в категорию."""
+        if not isinstance(product, Product):
+            raise TypeError("Можно добавлять только объекты класса Product")
+        self._products.append(product)
+        Category.product_count += 1
+
+    def get_total_products(self) -> int:
+        return len(self._products)
+
+    @property
+    def products(self) -> str:
+        if not self._products:
+            return ""
+        return "\n".join(str(p) for p in self._products)
+
+    def __str__(self) -> str:
+        total_qty = sum(p.quantity for p in self._products)
+        return f"{self.name}, количество продуктов: {total_qty} шт."
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "description": self.description,
+            "products": [p.to_dict() for p in self._products],
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Category":
-        products = [Product.from_dict(p) for p in data.get("products", [])]
+    def from_dict(cls, data: Dict[str, Any]) -> Category:
+        products_data = data.get("products", [])
+        products = [Product.from_dict(p) for p in products_data]
         return cls(
             name=data["name"],
             description=data["description"],
             products=products,
         )
 
+    # --- Методы ниже используются только для тестирования валидации ---
+    # Они намеренно принимают некорректные типы, поэтому mypy подавляется
+
+    def _test_add_invalid_string(self) -> None:
+        self.add_product("Не продукт")  # type: ignore[arg-type]
+
+    def _test_add_invalid_int(self) -> None:
+        self.add_product(123)  # type: ignore[arg-type]
+
+    def _test_add_invalid_none(self) -> None:
+        self.add_product(None)  # type: ignore[arg-type]
+
+
+class Order(BaseEntity):
+    """Класс заказа."""
+
+    def __init__(self, name: str, description: str, product: Product, quantity: int) -> None:
+        super().__init__(name, description)
+        self.product = product
+        self.quantity = quantity
+
+    @property
+    def total_cost(self) -> float:
+        return self.product.price * self.quantity
+
+    def __str__(self) -> str:
+        return (
+            f"Заказ '{self.name}', товар: {self.product.name}, "
+            f"количество: {self.quantity} шт., "
+            f"итоговая стоимость: {self.total_cost} руб."
+        )
+
 
 class Read_Json_file:
-    """Класс для чтения JSON файла и управления данными."""
+    """Менеджер для загрузки категорий из JSON."""
 
     def __init__(self) -> None:
         self.categories: List[Category] = []
@@ -175,222 +325,32 @@ class Read_Json_file:
         return self.categories
 
     def get_total_products(self) -> int:
-        return sum(cat.get_total_products() for cat in self.categories)
+        return sum(c.get_total_products() for c in self.categories)
+
+    def __str__(self) -> str:
+        total_products = self.get_total_products()
+        return f"{len(self.categories)} категорий, {total_products} товаров"
 
     @classmethod
-    def load_from_json(cls, file_path: str) -> "Read_Json_file":
-        path = Path(file_path)
+    def load_from_json(cls, filepath: str) -> Read_Json_file:
+        manager = cls()
+        path = Path(filepath)
         if not path.exists():
-            print(f"❌ Файл не найден: {file_path}")
-            return cls()
-
+            return manager
         try:
-            with open(file_path, "r", encoding="utf-8") as file:
-                data = json.load(file)
-
-            manager = cls()
-            categories_data = data.get("categories", []) if isinstance(data, dict) else data
-
-            for category_data in categories_data:
-                category = Category.from_dict(category_data)
-                manager.add_category(category)
-
-            print(f"✅ Загружено {len(manager.categories)} категорий")
+            raw = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError, ValueError:
             return manager
 
-        except Exception as e:
-            print(f"❌ Ошибка при загрузке JSON: {e}")
-            return cls()
+        if isinstance(raw, list):
+            categories_data = raw
+        elif isinstance(raw, dict):
+            categories_data = raw.get("categories", [])
+        else:
+            return manager
 
-    def __str__(self) -> str:
-        return f"Менеджер: {len(self.categories)} категорий, {self.get_total_products()} товаров"
+        for cat_data in categories_data:
+            category = Category.from_dict(cat_data)
+            manager.add_category(category)
 
-
-class Smartphone(Product):
-
-    def __init__(self,
-                 name: str,
-                 description: str,
-                 price:float,
-                 quantity:int,
-                 efficiency: float,
-                 model: str,
-                 memory: int,
-                 color: str,):
-     super().__init__(name, description, price,quantity)
-     self.efficiency = efficiency
-     self.model = model
-     self.memory = memory
-     self.color = color
-
-
-    def __str__(self) -> str:
-        return (
-            f"{self.name}({self.model},{self.color},"
-            f"{self.memory}GB), {self.price} руб. Остаток: {self.quantity} шт."
-        )
-
-    def to_dict(self) -> Dict[str, Any]:
-        data = super().to_dict()
-        data.update({
-            "type":"Smartphone",
-            "efficiency":self.efficiency,
-            "model":self.model,
-            "memory":self.memory,
-            "color": self.color
-        })
-        return data
-
-
-
-
-class LawnGrass(Product):
-    def __init__(self,
-                 name:str,
-                 description:str,
-                 price:float,
-                 quantity:int,
-                 country:str,
-                 germination_period:int,
-                 color:str,):
-     super().__init__(name,description,price,quantity)
-     self.country = country
-     self.germination_period = germination_period
-     self.color = color
-
-
-    def __str__(self)->str:
-        return (
-            f"{self.name} ({self.color}, страна: {self.country}),"
-            f"{self.price} руб. Остаток: {self.quantity} шт."
-        )
-
-    def to_dict(self) -> Dict[str,Any]:
-        data = super().to_dict()
-        data.update(
-            {
-                "type":"LawnGrass",
-                "country":self.country,
-                "germination_period":self.germination_period,
-                "color":self.color,
-            }
-        )
-        return data
-
-
-
-if __name__ == "__main__":
-    Product.product_count = 0
-    Category.category_count = 0
-    Category.product_count = 0
-
-    manager = Read_Json_file.load_from_json(r"C:\Users\Zheka1998\Desktop\TaskОne_2\data\products.json")
-
-    print(manager)
-    print()
-
-    for category in manager.get_all_categories():
-        print(category)
-        print(category.products)
-        print()
-
-    print(f"\nВсего создано категорий: {Category.category_count}")
-    print(f"Всего создано товаров: {Product.product_count}")
-    print(f"Всего товаров во всех категориях: {Category.product_count}")
-
-    print("\n" + "=" * 50)
-    print("ДЕМОНСТРАЦИЯ НОВОЙ ФУНКЦИОНАЛЬНОСТИ")
-    print("=" * 50)
-
-    # Создаём траву
-    grass1 = LawnGrass(
-        name="Green Lawn",
-        description="Газонная трава премиум",
-        price=500.0,
-        quantity=10,
-        country="Germany",
-        germination_period=14,
-        color="Green",
-    )
-
-    grass2 = LawnGrass(
-        name="Sport Grass",
-        description="Трава для спортивных газонов",
-        price=700.0,
-        quantity=8,
-        country="Netherlands",
-        germination_period=10,
-        color="Dark Green",
-    )
-
-    phone1 = Smartphone(
-        name="IPhone 15 Pro",
-        description="Флагман Apple",
-        price=99990.0,
-        quantity=5,
-        efficiency=95.5,
-        model="IPhone 15 Pro",
-        memory=256,
-        color="Black",
-    )
-
-    phone2 = Smartphone(
-        name="Samsung Galaxy S24",
-        description="Флагман Samsung",
-        price=89990.0,
-        quantity=3,
-        efficiency=92.0,
-        model="Galaxy S24 Ultra",
-        memory=512,
-        color="Titanium",
-    )
-
-    print("\n✅ Созданные товары:")
-    print(phone1)
-    print(phone2)
-    print(grass1)
-    print(grass2)
-
-    print("\n✅ Сложение двух смартфонов:")
-    total_phones = phone1 + phone2
-    print(f"Общая стоимость: {total_phones} руб.")
-
-    print("\n✅ Сложение двух трав:")
-    total_grass = grass1 + grass2
-    print(f"Общая стоимость: {total_grass} руб.")
-
-    # Проверяем защиту от сложения разных классов
-    print("\n❌ Попытка сложить смартфон и траву:")
-    try:
-        phone1 + grass1
-    except TypeError as e:
-        print(f"Ошибка: {e}")
-
-    # ✅ ТЕПЕРЬ ЭТО НА ТОМ ЖЕ УРОВНЕ, ЧТО И try/except ВЫШЕ
-    print("\n✅ Добавление товаров в категорию:")
-    tech_category = Category("Электроника", "Смартфоны и гаджеты")
-    tech_category.add_product(phone1)
-    tech_category.add_product(phone2)
-    print(tech_category)
-    print(tech_category.products)
-
-    garden_category = Category("Сад", "Товары для сада")
-    garden_category.add_product(grass1)
-    garden_category.add_product(grass2)
-    print(garden_category)
-    print(garden_category.products)
-
-    # Проверяем защиту от добавления посторонних объектов
-    print("\n❌ Попытка добавить строку в категорию:")
-    try:
-        tech_category.add_product("Не продукт")
-    except TypeError as e:
-        print(f"Ошибка: {e}")
-
-    print("\n❌ Попытка добавить число в категорию:")
-    try:
-        tech_category.add_product(123)
-    except TypeError as e:
-        print(f"Ошибка: {e}")
-
-    print("\n✅ Все проверки пройдены!")
+        return manager
