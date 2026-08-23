@@ -1,12 +1,10 @@
 import io
+import os
 import unittest
 import unittest.mock as mock
-from typing import Any, Dict, List
+from typing import Any, Dict
 
-# Если ты не используешь pytest.ini с pythonpath, раскомментируй эти строки:
-# import os
-# import sys
-# sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import requests
 
 from src.api_handlers import AeroplanesAPI
 from src.main import main
@@ -77,19 +75,19 @@ class TestAeroplaneModel(unittest.TestCase):
     def test_validation_empty_icao(self) -> None:
         """Проверка валидации: пустой ICAO24"""
         with self.assertRaises(ValueError) as context:
-            Aeroplane("", "Test", "US", 1, 1, 1, 1, 1, False, 1, 1, 1) # type: ignore[arg-type]
+            Aeroplane("", "Test", "US", 1, 1, 1, 1, 1, False, 1, 1, 1)  # type: ignore[arg-type]
         self.assertIn("ICAO24 code cannot be empty", str(context.exception))
 
     def test_validation_invalid_altitude(self) -> None:
         """Проверка валидации: некорректная высота"""
         with self.assertRaises(ValueError) as context:
-            Aeroplane("test123", "Test", "US", 1, 1, 1, 1, "invalid", False, 1, 1, 1) # type: ignore[arg-type]
+            Aeroplane("test123", "Test", "US", 1, 1, 1, 1, "invalid", False, 1, 1, 1)  # type: ignore[arg-type]
         self.assertIn("Barometric altitude must be a number", str(context.exception))
 
     def test_validation_invalid_velocity(self) -> None:
         """Проверка валидации: некорректная скорость"""
         with self.assertRaises(ValueError) as context:
-            Aeroplane("test123", "Test", "US", 1, 1, 1, 1, 100, False, "invalid", 1, 1) # type: ignore[arg-type]
+            Aeroplane("test123", "Test", "US", 1, 1, 1, 1, 100, False, "invalid", 1, 1)  # type: ignore[arg-type]
         self.assertIn("Velocity must be a number", str(context.exception))
 
     def test_none_values_handling(self) -> None:
@@ -132,6 +130,14 @@ class TestAeroplaneModel(unittest.TestCase):
         """Проверка данных без ключа states"""
         self.assertEqual(Aeroplane.cast_to_object_list({"other": []}), [])
 
+    def test_cast_to_object_list_invalid_state(self) -> None:
+        """Проверка обработки битых данных внутри states"""
+        raw_data: Dict[str, Any] = {
+            "states": ["invalid_string", [], ["short"]]  # Не список  # Пустой список  # Слишком короткий список
+        }
+        objects = Aeroplane.cast_to_object_list(raw_data)
+        self.assertEqual(len(objects), 0)
+
     def test_repr(self) -> None:
         """Проверка строкового представления"""
         repr_str = repr(self.plane1)
@@ -146,19 +152,17 @@ class TestJSONSaver(unittest.TestCase):
         """Подготовка тестового файла"""
         self.test_file = "test_data.json"
         self.saver = JSONSaver(filename=self.test_file)
-        import os
         if os.path.exists(self.test_file):
             os.remove(self.test_file)
 
     def tearDown(self) -> None:
         """Очистка после тестов"""
-        import os
         if os.path.exists(self.test_file):
             os.remove(self.test_file)
 
     def test_add_and_get(self) -> None:
         """Проверка добавления и чтения"""
-        plane = Aeroplane("test1", "TST", "TestLand", 1, 1, 1, 1, 100, False, 10, 1, 1) # type: ignore[arg-type]
+        plane = Aeroplane("test1", "TST", "TestLand", 1, 1, 1, 1, 100, False, 10, 1, 1)  # type: ignore[arg-type]
         self.saver.add_aeroplane(plane)
         loaded = self.saver.get_all()
         self.assertEqual(len(loaded), 1)
@@ -166,22 +170,22 @@ class TestJSONSaver(unittest.TestCase):
 
     def test_add_multiple(self) -> None:
         """Проверка добавления нескольких записей"""
-        p1 = Aeroplane("id1", "C1", "US", 1, 1, 1, 1, 100, False, 10, 1, 1) # type: ignore[arg-type]
-        p2 = Aeroplane("id2", "C2", "US", 1, 1, 1, 1, 200, False, 20, 1, 1) # type: ignore[arg-type]
+        p1 = Aeroplane("id1", "C1", "US", 1, 1, 1, 1, 100, False, 10, 1, 1)  # type: ignore[arg-type]
+        p2 = Aeroplane("id2", "C2", "US", 1, 1, 1, 1, 200, False, 20, 1, 1)  # type: ignore[arg-type]
         self.saver.add_aeroplane(p1)
         self.saver.add_aeroplane(p2)
         self.assertEqual(len(self.saver.get_all()), 2)
 
     def test_add_duplicate(self) -> None:
         """Проверка защиты от дубликатов"""
-        p = Aeroplane("id1", "C1", "US", 1, 1, 1, 1, 100, False, 10, 1, 1) # type: ignore[arg-type]
+        p = Aeroplane("id1", "C1", "US", 1, 1, 1, 1, 100, False, 10, 1, 1)  # type: ignore[arg-type]
         self.saver.add_aeroplane(p)
         self.saver.add_aeroplane(p)
         self.assertEqual(len(self.saver.get_all()), 1)
 
     def test_delete(self) -> None:
         """Проверка удаления"""
-        p = Aeroplane("del1", "DEL", "US", 1, 1, 1, 1, 100, False, 10, 1, 1) # type: ignore[arg-type]
+        p = Aeroplane("del1", "DEL", "US", 1, 1, 1, 1, 100, False, 10, 1, 1)  # type: ignore[arg-type]
         self.saver.add_aeroplane(p)
         self.assertTrue(self.saver.delete_aeroplane("del1"))
         self.assertEqual(len(self.saver.get_all()), 0)
@@ -192,8 +196,8 @@ class TestJSONSaver(unittest.TestCase):
 
     def test_find_by_criteria_country(self) -> None:
         """Поиск по стране"""
-        p_ru = Aeroplane("ru1", "RU", "Russia", 1, 1, 1, 1, 5000, False, 10, 1, 1) # type: ignore[arg-type]
-        p_us = Aeroplane("us1", "US", "United States", 1, 1, 1, 1, 10000, False, 10, 1, 1) # type: ignore[arg-type]
+        p_ru = Aeroplane("ru1", "RU", "Russia", 1, 1, 1, 1, 5000, False, 10, 1, 1)  # type: ignore[arg-type]
+        p_us = Aeroplane("us1", "US", "United States", 1, 1, 1, 1, 10000, False, 10, 1, 1)  # type: ignore[arg-type]
         self.saver.add_aeroplane(p_ru)
         self.saver.add_aeroplane(p_us)
 
@@ -203,8 +207,8 @@ class TestJSONSaver(unittest.TestCase):
 
     def test_find_by_criteria_altitude(self) -> None:
         """Поиск по минимальной высоте"""
-        p_low = Aeroplane("low", "L", "US", 1, 1, 1, 1, 1000, False, 10, 1, 1) # type: ignore[arg-type]
-        p_high = Aeroplane("high", "H", "US", 1, 1, 1, 1, 10000, False, 10, 1, 1) # type: ignore[arg-type]
+        p_low = Aeroplane("low", "L", "US", 1, 1, 1, 1, 1000, False, 10, 1, 1)  # type: ignore[arg-type]
+        p_high = Aeroplane("high", "H", "US", 1, 1, 1, 1, 10000, False, 10, 1, 1)  # type: ignore[arg-type]
         self.saver.add_aeroplane(p_low)
         self.saver.add_aeroplane(p_high)
 
@@ -214,10 +218,25 @@ class TestJSONSaver(unittest.TestCase):
 
     def test_find_by_criteria_no_results(self) -> None:
         """Поиск без результатов"""
-        p = Aeroplane("t1", "T", "US", 1, 1, 1, 1, 100, False, 10, 1, 1) # type: ignore[arg-type]
+        p = Aeroplane("t1", "T", "US", 1, 1, 1, 1, 100, False, 10, 1, 1)  # type: ignore[arg-type]
         self.saver.add_aeroplane(p)
         found = self.saver.find_by_criteria(country="Nowhere")
         self.assertEqual(len(found), 0)
+
+    def test_load_corrupted_json(self) -> None:
+        """Проверка загрузки поврежденного JSON"""
+        with open(self.test_file, "w") as f:
+            f.write("{ invalid json }")
+        # Метод get_all должен вернуть пустой список, а не упасть
+        loaded = self.saver.get_all()
+        self.assertEqual(len(loaded), 0)
+
+    def test_load_json_not_list(self) -> None:
+        """Проверка загрузки JSON, который не является списком"""
+        with open(self.test_file, "w") as f:
+            f.write('{"key": "value"}')
+        loaded = self.saver.get_all()
+        self.assertEqual(len(loaded), 0)
 
 
 class TestAeroplanesAPI(unittest.TestCase):
@@ -255,6 +274,16 @@ class TestAeroplanesAPI(unittest.TestCase):
         self.assertIsNone(result)
 
     @mock.patch("src.api_handlers.requests.Session.get")
+    def test_get_coordinates_exception(self, mock_get: mock.Mock) -> None:
+        """Проверка обработки исключения при запросе координат"""
+        mock_get.side_effect = requests.exceptions.RequestException("Connection Error")
+
+        api = AeroplanesAPI()
+        result = api.get_coordinates("ErrorCountry")
+
+        self.assertIsNone(result)
+
+    @mock.patch("src.api_handlers.requests.Session.get")
     def test_get_aircraft_data_success(self, mock_get: mock.Mock) -> None:
         """Проверка получения данных о самолетах"""
         mock_response = mock.Mock()
@@ -268,6 +297,30 @@ class TestAeroplanesAPI(unittest.TestCase):
         self.assertIsNotNone(result)
         if result:
             self.assertIn("states", result)
+
+    @mock.patch("src.api_handlers.requests.Session.get")
+    def test_get_aircraft_data_rate_limit(self, mock_get: mock.Mock) -> None:
+        """Проверка обработки 429 Too Many Requests"""
+        mock_response = mock.Mock()
+        mock_response.status_code = 429
+        mock_get.return_value = mock_response
+
+        api = AeroplanesAPI()
+        result = api.get_aircraft_data([50.0, 30.0, 60.0, 40.0])
+
+        self.assertIsNotNone(result)
+        if result:
+            self.assertEqual(result["states"], [])
+
+    @mock.patch("src.api_handlers.requests.Session.get")
+    def test_get_aircraft_data_exception(self, mock_get: mock.Mock) -> None:
+        """Проверка обработки исключения при запросе самолетов"""
+        mock_get.side_effect = requests.exceptions.RequestException("Timeout")
+
+        api = AeroplanesAPI()
+        result = api.get_aircraft_data([50.0, 30.0, 60.0, 40.0])
+
+        self.assertIsNone(result)
 
     @mock.patch("src.api_handlers.requests.Session.get")
     def test_get_aeroplanes_integration(self, mock_get: mock.Mock) -> None:
@@ -291,6 +344,19 @@ class TestAeroplanesAPI(unittest.TestCase):
         if result:
             self.assertIn("states", result)
 
+    @mock.patch("src.api_handlers.requests.Session.get")
+    def test_get_aeroplanes_no_coords(self, mock_get: mock.Mock) -> None:
+        """Тест, когда координаты не найдены"""
+        mock_response = mock.Mock()
+        mock_response.json.return_value = []
+        mock_response.raise_for_status = mock.Mock()
+        mock_get.return_value = mock_response
+
+        api = AeroplanesAPI()
+        result = api.get_aeroplanes("Unknown")
+
+        self.assertIsNone(result)
+
 
 class TestMainInteraction(unittest.TestCase):
     """Тесты пользовательского интерфейса"""
@@ -300,11 +366,7 @@ class TestMainInteraction(unittest.TestCase):
     @mock.patch("src.main.AeroplanesAPI")
     @mock.patch("src.main.JSONSaver")
     def test_user_interaction_load_data(
-        self,
-        mock_saver_class: mock.Mock,
-        mock_api_class: mock.Mock,
-        mock_stdout: io.StringIO,
-        mock_input: mock.Mock
+        self, mock_saver_class: mock.Mock, mock_api_class: mock.Mock, mock_stdout: io.StringIO, mock_input: mock.Mock
     ) -> None:
         """Проверка загрузки данных"""
         mock_api_instance = mock.Mock()
@@ -328,14 +390,9 @@ class TestMainInteraction(unittest.TestCase):
     @mock.patch("src.main.AeroplanesAPI")
     @mock.patch("src.main.JSONSaver")
     def test_user_interaction_top_n(
-        self,
-        mock_saver_class: mock.Mock,
-        mock_api_class: mock.Mock,
-        mock_stdout: io.StringIO,
-        mock_input: mock.Mock
+        self, mock_saver_class: mock.Mock, mock_api_class: mock.Mock, mock_stdout: io.StringIO, mock_input: mock.Mock
     ) -> None:
         """Проверка вывода топ N"""
-        # Настраиваем API так, чтобы он вернул реальные данные о самолётах
         mock_api_instance = mock.Mock()
         mock_api_instance.get_aeroplanes.return_value = {
             "states": [
@@ -355,9 +412,58 @@ class TestMainInteraction(unittest.TestCase):
             pass
 
         output = mock_stdout.getvalue()
-        # Теперь в выводе должно быть слово "Топ" (после загрузки данных)
         self.assertIn("Топ", output)
         self.assertIn("Загружено 3 самолетов", output)
+
+    @mock.patch("builtins.input", side_effect=["2", "0"])
+    @mock.patch("sys.stdout", new_callable=io.StringIO)
+    @mock.patch("src.main.AeroplanesAPI")
+    @mock.patch("src.main.JSONSaver")
+    def test_user_interaction_top_n_zero(
+        self, mock_saver_class: mock.Mock, mock_api_class: mock.Mock, mock_stdout: io.StringIO, mock_input: mock.Mock
+    ) -> None:
+        """Проверка ввода N=0 или меньше"""
+        # Сначала пытаемся получить топ без данных (пункт 2), потом выходим
+        mock_api_instance = mock.Mock()
+        mock_api_class.return_value = mock_api_instance
+        mock_saver_instance = mock.Mock()
+        mock_saver_class.return_value = mock_saver_instance
+
+        try:
+            main()
+        except SystemExit:
+            pass
+
+        output = mock_stdout.getvalue()
+        # Должно быть сообщение о том, что данных нет или ошибка ввода
+        self.assertIn("Сначала загрузите данные", output)
+
+    @mock.patch("builtins.input", side_effect=["1", "Spain", "2", "-5", "2", "5", "0"])
+    @mock.patch("sys.stdout", new_callable=io.StringIO)
+    @mock.patch("src.main.AeroplanesAPI")
+    @mock.patch("src.main.JSONSaver")
+    def test_user_interaction_top_n_negative_then_success(
+        self, mock_saver_class: mock.Mock, mock_api_class: mock.Mock, mock_stdout: io.StringIO, mock_input: mock.Mock
+    ) -> None:
+        """Проверка ввода отрицательного N, затем успешного"""
+        mock_api_instance = mock.Mock()
+        mock_api_instance.get_aeroplanes.return_value = {
+            "states": [
+                ["abc1", "CALL1", "Russia", 1, 1, 1.0, 1.0, 1000.0, False, 50.0, 90.0, 0.0],
+            ]
+        }
+        mock_api_class.return_value = mock_api_instance
+        mock_saver_instance = mock.Mock()
+        mock_saver_class.return_value = mock_saver_instance
+
+        try:
+            main()
+        except SystemExit:
+            pass
+
+        output = mock_stdout.getvalue()
+        self.assertIn("Ошибка: N должно быть больше 0", output)
+        self.assertIn("Топ", output)
 
 
 if __name__ == "__main__":

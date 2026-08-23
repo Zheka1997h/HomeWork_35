@@ -1,4 +1,5 @@
-from typing import List, Union, Type
+from typing import List, Type, Union
+
 from src.api_handlers import AeroplanesAPI
 from src.models import Aeroplane
 from src.storage import JSONSaver
@@ -40,7 +41,7 @@ def main() -> None:
         print_menu()
         choice = get_user_input("Выберите действие: ", str)
 
-        if choice == '1':
+        if choice == "1":
             country = input("Введите название страны (на английском, например Spain): ")
             print("Загрузка данных... Это может занять время.")
             raw_data = api.get_aeroplanes(country)
@@ -50,25 +51,28 @@ def main() -> None:
             else:
                 print("Не удалось получить данные или страна не найдена.")
 
-        elif choice == '2':
+        elif choice == "2":
             if not current_aeroplanes:
                 print("Сначала загрузите данные (пункт 1) или загрузите из файла (пункт 5).")
                 continue
 
-            n = get_user_input("Введите количество самолетов для топа (N): ", int)
-            # Сортировка по высоте (по убыванию)
+            # Явное приведение к int для mypy
+            n = int(get_user_input("Введите количество самолетов для топа (N): ", int))
+
+            # Проверка N > 0
+            if n <= 0:
+                print("Ошибка: N должно быть больше 0.")
+                continue
+
             sorted_planes = sorted(current_aeroplanes, key=lambda x: x.altitude, reverse=True)
             top_planes = sorted_planes[:n]
 
             print(f"\n--- Топ {n} самолетов по высоте ---")
             for i, plane in enumerate(top_planes, 1):
-                callsign = plane.callsign or 'No Call'
-                print(
-                    f"{i}. {callsign} | Alt: {plane.altitude:.2f}m | "
-                    f"Country: {plane.origin_country}"
-                )
+                callsign = plane.callsign or "No Call"
+                print(f"{i}. {callsign} | Alt: {plane.altitude:.2f}m | " f"Country: {plane.origin_country}")
 
-        elif choice == '3':
+        elif choice == "3":
             if not current_aeroplanes:
                 print("Нет данных для фильтрации.")
                 continue
@@ -81,13 +85,10 @@ def main() -> None:
                 print("Ничего не найдено.")
             else:
                 for plane in filtered:
-                    callsign = plane.callsign or 'No Call'
-                    print(
-                        f"- {callsign} | Alt: {plane.altitude:.2f}m | "
-                        f"Speed: {plane.speed:.2f} m/s"
-                    )
+                    callsign = plane.callsign or "No Call"
+                    print(f"- {callsign} | Alt: {plane.altitude:.2f}m | " f"Speed: {plane.speed:.2f} m/s")
 
-        elif choice == '4':
+        elif choice == "4":
             if not current_aeroplanes:
                 print("Нечего сохранять.")
                 continue
@@ -96,15 +97,15 @@ def main() -> None:
                 try:
                     saver.add_aeroplane(plane)
                     count += 1
-                except Exception as e:
+                except (ValueError, TypeError, KeyError) as e:
                     print(f"Ошибка сохранения самолета {plane.icao24}: {e}")
             print(f"Сохранено {count} записей в {saver.filename}")
 
-        elif choice == '5':
+        elif choice == "5":
             current_aeroplanes = saver.get_all()
             print(f"Загружено {len(current_aeroplanes)} записей из файла.")
 
-        elif choice == '0':
+        elif choice == "0":
             print("Выход из программы.")
             break
 
