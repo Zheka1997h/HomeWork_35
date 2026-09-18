@@ -3,7 +3,7 @@ import os
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List
 
-from src.models import Aeroplane
+from lost.models import Aeroplane
 
 
 class BaseStorage(ABC):

@@ -6,10 +6,10 @@ from typing import Any, Dict
 
 import requests
 
-from src.api_handlers import AeroplanesAPI
-from src.main import main
-from src.models import Aeroplane
-from src.storage import JSONSaver
+from lost.api_handlers import AeroplanesAPI
+from lost.main import main
+from lost.models import Aeroplane
+from lost.storage import JSONSaver
 
 
 class TestAeroplaneModel(unittest.TestCase):
